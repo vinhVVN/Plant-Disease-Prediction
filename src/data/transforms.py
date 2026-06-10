@@ -1,10 +1,8 @@
 from torchvision import transforms
 
 def get_baseline_transforms(image_size=224):
-    """
-    Returns the strict baseline transforms (No complex data augmentation).
-    Matches the Khan 2023 paper methodology for the PlantVillage dataset.
-    """
+    # baseline transforms (không data augmentation)
+
     baseline_transform = transforms.Compose([
         transforms.Resize((image_size, image_size)),
         transforms.ToTensor(),
@@ -14,10 +12,8 @@ def get_baseline_transforms(image_size=224):
     return baseline_transform
 
 def get_hpo_transforms(image_size=224):
-    """
-    Returns an expanded search space configuration for Data Augmentation,
-    to be used EXCLUSIVELY during Optuna Hyperparameter Optimization trials.
-    """
+    # Data Augmentation cho Optuna Hyperparameter Optimization
+    
     hpo_transform = transforms.Compose([
         transforms.RandomResizedCrop(image_size, scale=(0.8, 1.0)),
         transforms.RandomHorizontalFlip(),

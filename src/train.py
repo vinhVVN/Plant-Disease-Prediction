@@ -13,14 +13,12 @@ from src.utils.weight_loader import migrate_imagenet_weights
 from src.utils.metrics import MetricTracker
 
 def train_model(config_path="configs/default_config.yaml"):
-    # 1. Load Configurations
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
 
-    # 2. Data Pipeline setup
     dataset_dir = config['data']['dataset_dir']
     image_size = config['data']['image_size']
     batch_size = config['data']['batch_size']
@@ -40,13 +38,13 @@ def train_model(config_path="configs/default_config.yaml"):
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=config['data']['num_workers'])
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=config['data']['num_workers'])
 
-    # 3. Model Initialization & Strict Surgery
+    # Model Initialization & Strict Surgery
     model = MobileNetV3Small(num_classes=config['model']['num_classes'])
     if config['model']['pretrained']:
         model = migrate_imagenet_weights(model, num_classes=config['model']['num_classes'])
     model = model.to(device)
 
-    # 4. Training Engine Essentials
+    # Training Engine Essentials
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), 
                            lr=config['training']['learning_rate'], 

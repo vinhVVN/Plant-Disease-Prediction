@@ -2,10 +2,6 @@ import numpy as np
 from sklearn.metrics import f1_score, accuracy_score
 
 class MetricTracker:
-    """
-    Utility class to track losses and compute evaluation metrics.
-    Crucial for handling the imbalanced nature of PlantVillage using Macro F1-Score.
-    """
     def __init__(self):
         self.reset()
 
@@ -22,7 +18,7 @@ class MetricTracker:
 
     def compute(self):
         acc = accuracy_score(self.y_true, self.y_pred)
-        # Macro F1 is critical for imbalanced classes
+        # Macro F1 cho imbalanced classes
         macro_f1 = f1_score(self.y_true, self.y_pred, average='macro', zero_division=0)
         mean_loss = np.mean(self.losses) if self.losses else 0.0
         
