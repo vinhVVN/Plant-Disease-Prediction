@@ -40,7 +40,7 @@ class MobileNetV3Small(nn.Module):
         self.bn2 = nn.BatchNorm2d(576)
         self.hs2 = Hswish(inplace=True)
 
-        # Classification Head
+        # Classification Head (Matching torchvision for Dynamic Quantization)
         self.avgpool = nn.AdaptiveAvgPool2d(1)
         
         self.classifier = nn.Sequential(
@@ -62,7 +62,7 @@ class MobileNetV3Small(nn.Module):
         x = self.hs2(x)
 
         x = self.avgpool(x)
-        x = torch.flatten(x, 1)
+        x = torch.flatten(x, 1) # Flatten MUST occur before the classifier
         x = self.classifier(x)
 
         return x
