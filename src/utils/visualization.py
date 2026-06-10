@@ -7,10 +7,6 @@ from sklearn.metrics import confusion_matrix
 from sklearn.manifold import TSNE
 
 def plot_learning_curves(history_dict, save_path):
-    """
-    Plots Training vs Validation curves for Loss, Accuracy, and Macro-F1.
-    Replicates Figures 5 & 6 from the Khan 2023 paper.
-    """
     epochs = range(1, len(history_dict['train_loss']) + 1)
     
     fig, axes = plt.subplots(1, 3, figsize=(18, 5))
@@ -47,9 +43,6 @@ def plot_learning_curves(history_dict, save_path):
     plt.close()
 
 def plot_confusion_matrix(y_true, y_pred, classes, save_path):
-    """
-    Renders a high-quality heatmap of the confusion matrix.
-    """
     cm = confusion_matrix(y_true, y_pred)
     plt.figure(figsize=(16, 14))
     sns.heatmap(cm, annot=False, cmap='Blues', fmt='g', 
@@ -64,19 +57,12 @@ def plot_confusion_matrix(y_true, y_pred, classes, save_path):
     plt.close()
 
 def extract_features_and_tsne(model, dataloader, device, save_path):
-    """
-    Extracts 1024-dimensional latent features from the penultimate layer
-    and plots a 2D t-SNE scatter plot color-coded by class (Replicating Figure 7).
-    """
     features = []
     labels = []
     
-    # Define a hook to intercept the output of the 1024-D layer 
-    # (using Hswish activation, model.classifier[1], to get the post-activation 1024-D features)
     def hook_fn(module, input, output):
         features.append(output.detach().cpu().numpy())
         
-    # Register the forward hook
     handle = model.classifier[1].register_forward_hook(hook_fn)
     
     model.eval()
@@ -86,14 +72,12 @@ def extract_features_and_tsne(model, dataloader, device, save_path):
             _ = model(imgs)
             labels.extend(lbls.numpy())
             
-    # Remove the hook after extraction to maintain architectural integrity
     handle.remove()
     
-    # Concatenate all extracted features from batches
     features = np.concatenate(features, axis=0)
     labels = np.array(labels)
     
-    print("Running t-SNE dimensionality reduction... This may take a while.")
+    print("Running t-SNE ...")
     tsne = TSNE(n_components=2, random_state=42)
     tsne_results = tsne.fit_transform(features)
     

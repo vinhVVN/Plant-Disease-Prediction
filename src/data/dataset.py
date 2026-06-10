@@ -3,17 +3,6 @@ from PIL import Image
 from torch.utils.data import Dataset
 
 class PlantVillageDataset(Dataset):
-    """
-    Custom PyTorch Dataset for the PlantVillage dataset.
-    Expects a directory structure where subdirectories are class names:
-    dataset_dir/
-    ├── Apple___Apple_scab/
-    │   ├── image1.jpg
-    │   └── ...
-    ├── Apple___Black_rot/
-    │   └── ...
-    └── ...
-    """
     def __init__(self, dataset_dir, transform=None):
         self.dataset_dir = dataset_dir
         self.transform = transform

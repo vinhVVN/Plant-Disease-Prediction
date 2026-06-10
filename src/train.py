@@ -60,7 +60,7 @@ def train_model(config_path="configs/default_config.yaml"):
     epochs_no_improve = 0
     tracker = MetricTracker()
 
-    # 5. Epoch Loop
+    # Epoch Loop
     for epoch in range(epochs):
         print(f"\nEpoch {epoch+1}/{epochs}")
         model.train()
