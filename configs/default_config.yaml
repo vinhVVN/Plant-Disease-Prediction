@@ -17,7 +17,7 @@ training:
   weight_decay: 0.0
   betas: [0.5, 0.99]
   early_stopping_patience: 20
-  save_dir: "./checkpoints"
+  save_dir: "/checkpoints"
 
 hpo:
   n_trials: 5

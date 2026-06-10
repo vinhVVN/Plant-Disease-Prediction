@@ -104,5 +104,15 @@ def tune_hyperparameters():
     for key, value in trial.params.items():
         print("    {}: {}".format(key, value))
 
+    # Save best params back to config
+    config['training']['learning_rate'] = trial.params['lr']
+    config['training']['weight_decay'] = trial.params['weight_decay']
+    config['training']['optimizer'] = trial.params['optimizer']
+    
+    with open("configs/default_config.yaml", 'w') as f:
+        yaml.safe_dump(config, f)
+        
+    print("Successfully updated configs/default_config.yaml with best hyperparameters.")
+
 if __name__ == '__main__':
     tune_hyperparameters()

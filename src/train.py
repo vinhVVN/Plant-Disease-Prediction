@@ -46,10 +46,17 @@ def train_model(config_path="configs/default_config.yaml"):
 
     # Training Engine Essentials
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), 
-                           lr=config['training']['learning_rate'], 
-                           weight_decay=config['training']['weight_decay'],
-                           betas=tuple(config['training']['betas']))
+    
+    opt_name = config['training'].get('optimizer', 'Adam')
+    lr = config['training']['learning_rate']
+    wd = config['training']['weight_decay']
+    
+    if opt_name == "AdamW":
+        optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=wd, betas=tuple(config['training'].get('betas', (0.9, 0.999))))
+    elif opt_name == "RMSprop":
+        optimizer = optim.RMSprop(model.parameters(), lr=lr, weight_decay=wd)
+    else:
+        optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=wd, betas=tuple(config['training'].get('betas', (0.9, 0.999))))
 
     epochs = config['training']['epochs']
     patience = config['training']['early_stopping_patience']
@@ -59,6 +66,8 @@ def train_model(config_path="configs/default_config.yaml"):
     best_val_f1 = 0.0
     epochs_no_improve = 0
     tracker = MetricTracker()
+    
+    history = {'train_loss': [], 'train_acc': [], 'train_f1': [], 'val_loss': [], 'val_acc': [], 'val_f1': []}
 
     # Epoch Loop
     for epoch in range(epochs):
@@ -98,6 +107,13 @@ def train_model(config_path="configs/default_config.yaml"):
         print(f"Train - Loss: {train_metrics['loss']:.4f}, Acc: {train_metrics['accuracy']:.4f}, Macro F1: {train_metrics['macro_f1']:.4f}")
         print(f"Val   - Loss: {val_metrics['loss']:.4f}, Acc: {val_metrics['accuracy']:.4f}, Macro F1: {val_metrics['macro_f1']:.4f}")
 
+        history['train_loss'].append(train_metrics['loss'])
+        history['train_acc'].append(train_metrics['accuracy'])
+        history['train_f1'].append(train_metrics['macro_f1'])
+        history['val_loss'].append(val_metrics['loss'])
+        history['val_acc'].append(val_metrics['accuracy'])
+        history['val_f1'].append(val_metrics['macro_f1'])
+
         # Checkpointing & Early Stopping (Optimizing for Macro F1)
         if val_metrics['macro_f1'] > best_val_f1:
             best_val_f1 = val_metrics['macro_f1']
@@ -109,6 +125,8 @@ def train_model(config_path="configs/default_config.yaml"):
             if epochs_no_improve >= patience:
                 print(f"Early stopping triggered after {epoch+1} epochs.")
                 break
+                
+    return history
 
 if __name__ == '__main__':
     train_model()

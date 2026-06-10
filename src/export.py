@@ -40,13 +40,12 @@ def export_model_for_edge(config_path="configs/default_config.yaml"):
             dummy_input,
             onnx_path,
             export_params=True,
-            opset_version=17,
+            opset_version=18,
             do_constant_folding=True,
             input_names=['input'],
-            output_names=['output'],
-            dynamic_axes={'input': {0: 'batch_size'}, 'output': {0: 'batch_size'}}
+            output_names=['output']
         )
-        print(f"Success: ONNX model (Opset 17) saved to {onnx_path}")
+        print(f"Success: ONNX model (Opset 18) saved to {onnx_path}")
     except Exception as e:
         print(f"Failed (ONNX Export): {e}")
 
