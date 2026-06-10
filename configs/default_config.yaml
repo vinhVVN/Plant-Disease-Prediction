@@ -1,7 +1,7 @@
 # Default Configuration for Plant Disease MobileNetV3 Pipeline
 
 data:
-  dataset_dir: "/kaggle/input/plantvillage-dataset/color" # Adjust depending on Kaggle dataset path
+  dataset_dir: "/kaggle/input/datasets/thnhvinhs/spmohanty-plantvillage-dataset/PlantVillage-Dataset/raw/color" # Adjust depending on Kaggle dataset path
   image_size: 224
   batch_size: 64
   num_workers: 4
