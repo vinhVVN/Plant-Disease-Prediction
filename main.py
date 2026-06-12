@@ -12,7 +12,7 @@ from src.engine.tune import tune_hyperparameters
 from src.engine.export import export_model_for_edge
 
 def main():
-    parser = argparse.ArgumentParser(description="Plant Disease Classification Monorepo")
+    parser = argparse.ArgumentParser(description="Plant Disease Classification")
     parser.add_argument("--config", type=str, required=True, help="Path to YAML config file")
     parser.add_argument("--mode", type=str, required=True, choices=["train", "evaluate", "tune", "export"], help="Execution mode")
     args = parser.parse_args()

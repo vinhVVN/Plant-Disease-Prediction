@@ -2,9 +2,6 @@ from src.models.efficientnet import EfficientNetB0
 from src.models.mobilenet_v3 import MobileNetV3Small
 
 def create_model(config):
-    """
-    Factory function to create models based on the YAML configuration.
-    """
     model_config = config.get('model', {})
     model_name = model_config.get('name')
     num_classes = model_config.get('num_classes', 38)
@@ -21,9 +18,6 @@ def create_model(config):
         model = MobileNetV3Small(
             num_classes=num_classes
         )
-        # Note: Pretrained weights for custom MobileNetV3 architectures
-        # are typically loaded via a separate weight_loader script,
-        # but the instantiation is handled here.
     else:
         raise ValueError(f"Unknown model name: {model_name}")
         

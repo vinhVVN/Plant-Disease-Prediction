@@ -1,7 +1,17 @@
 import shutil
+from pathlib import Path
 from sklearn.model_selection import train_test_split
-from src.config import RAW_DIR, SPLIT_DIR, TRAIN_DIR, VAL_DIR, TEST_DIR, SEED
 from src.utils import create_dirs, set_seed
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+RAW_DIR = BASE_DIR / "data" / "raw"
+SPLIT_DIR = BASE_DIR / "data" / "split"
+
+TRAIN_DIR = SPLIT_DIR / "train"
+VAL_DIR = SPLIT_DIR / "val"
+TEST_DIR = SPLIT_DIR / "test"
+SEED = 42
 
 
 def copy_files(files, labels, target_root):

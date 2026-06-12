@@ -1,0 +1,3 @@
+dropout,test_loss,test_acc,head_epochs,finetune_epochs,best_model_path
+0.2,0.0620104105116964,0.9797459031485914,5,10,D:\DL\PlantDisease_Local\models\best_model_dropout_0.2.pth
+0.8,0.10070673279770599,0.9663045479653839,5,10,D:\DL\PlantDisease_Local\models\best_model_dropout_0.8.pth
