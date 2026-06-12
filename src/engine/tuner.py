@@ -7,12 +7,11 @@ import optuna
 
 from src.data.dataset import PlantVillageDataset
 from src.data.transforms import get_hpo_transforms, get_baseline_transforms
-from src.models.mobilenet_v3 import MobileNetV3Small
-from src.utils.weight_loader import migrate_imagenet_weights
+from src.models.factory import create_model
 from src.utils.metrics import MetricTracker
 
-def objective(trial):
-    with open("configs/default_config.yaml", 'r') as f:
+def objective(trial, config_path):
+    with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -39,9 +38,7 @@ def objective(trial):
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=config['data']['num_workers'])
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=config['data']['num_workers'])
 
-    model = MobileNetV3Small(num_classes=config['model']['num_classes'])
-    if config['model']['pretrained']:
-        model = migrate_imagenet_weights(model, num_classes=config['model']['num_classes'])
+    model = create_model(config)
     model = model.to(device)
 
     # Search Space Configuration
@@ -88,12 +85,12 @@ def objective(trial):
             
     return val_f1
 
-def tune_hyperparameters():
-    with open("configs/default_config.yaml", 'r') as f:
+def tune_hyperparameters(config_path="configs/mobilenet_v3.yaml"):
+    with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
         
     study = optuna.create_study(direction="maximize")
-    study.optimize(objective, n_trials=config['hpo']['n_trials'])
+    study.optimize(lambda trial: objective(trial, config_path), n_trials=config['hpo']['n_trials'])
     
     print("\n Optuna Tuning Completed")
     print("Number of finished trials: ", len(study.trials))

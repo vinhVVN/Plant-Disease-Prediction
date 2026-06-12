@@ -1,13 +1,12 @@
 import os
 import yaml
 import torch
-from src.models.mobilenet_v3 import MobileNetV3Small
+from src.models.factory import create_model
 
-def export_model_for_edge(config_path="configs/default_config.yaml"):
+def export_model_for_edge(config_path="configs/mobilenet_v3.yaml"):
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
         
-    num_classes = config['model']['num_classes']
     save_dir = config['training']['save_dir']
     checkpoint_path = os.path.join(save_dir, "best_model.pth")
     
@@ -15,7 +14,7 @@ def export_model_for_edge(config_path="configs/default_config.yaml"):
         print(f"Error: Checkpoint {checkpoint_path} not found. Ensure the model has been trained.")
         return
 
-    model = MobileNetV3Small(num_classes=num_classes)
+    model = create_model(config)
     model.load_state_dict(torch.load(checkpoint_path, map_location='cpu', weights_only=True))
     model.eval()
     print(f"Successfully loaded trained weights from {checkpoint_path}.")
