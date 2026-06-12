@@ -3,10 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 def _make_divisible(v, divisor=8, min_value=None):
-    """
-    This function ensures that all layers have a channel number that is divisible by 8.
-    This is standard practice in MobileNet implementations.
-    """
     if min_value is None:
         min_value = divisor
     new_v = max(min_value, int(v + divisor / 2) // divisor * divisor)
@@ -32,10 +28,6 @@ class Hswish(nn.Module):
 
 class SE_Module(nn.Module):
     def __init__(self, exp_size, squeeze_channels):
-        """
-        Squeeze-and-Excite Module.
-        Uses Conv2d 1x1 to mathematically match the paper and PyTorch's framework structure.
-        """
         super(SE_Module, self).__init__()
         self.fc1 = nn.Conv2d(exp_size, squeeze_channels, kernel_size=1)
         self.relu = nn.ReLU(inplace=True)
@@ -52,15 +44,11 @@ class SE_Module(nn.Module):
 
 class Bneck(nn.Module):
     def __init__(self, in_channels, exp_size, out_channels, kernel_size, stride, use_se, nl_class):
-        """
-        Inverted Residual Bottleneck Block.
-        Handles expansion, depthwise convolution, and projection.
-        """
         super(Bneck, self).__init__()
         self.use_res_connect = stride == 1 and in_channels == out_channels
 
         layers = []
-        # 1. Expansion phase
+        # Expansion phase
         if exp_size != in_channels:
             layers.extend([
                 nn.Conv2d(in_channels, exp_size, kernel_size=1, stride=1, padding=0, bias=False),
@@ -68,7 +56,7 @@ class Bneck(nn.Module):
                 nl_class(inplace=True)
             ])
 
-        # 2. Depthwise phase
+        # Depthwise phase
         padding = (kernel_size - 1) // 2
         layers.extend([
             nn.Conv2d(exp_size, exp_size, kernel_size=kernel_size, stride=stride, padding=padding, groups=exp_size, bias=False),
@@ -76,12 +64,12 @@ class Bneck(nn.Module):
             nl_class(inplace=True)
         ])
 
-        # 3. Squeeze-and-Excite phase
+        # Squeeze-and-Excite phase
         if use_se:
             squeeze_channels = _make_divisible(exp_size // 4, 8)
             layers.append(SE_Module(exp_size, squeeze_channels))
 
-        # 4. Projection phase
+        # Projection phase
         layers.extend([
             nn.Conv2d(exp_size, out_channels, kernel_size=1, stride=1, padding=0, bias=False),
             nn.BatchNorm2d(out_channels)

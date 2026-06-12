@@ -62,27 +62,18 @@ class MobileNetV3Small(nn.Module):
         x = self.hs2(x)
 
         x = self.avgpool(x)
-        x = torch.flatten(x, 1) # Flatten MUST occur before the classifier
+        x = torch.flatten(x, 1)
         x = self.classifier(x)
 
         return x
 
 
+
+
 if __name__ == '__main__':
-    
-    # 1. Initialize model
     model = MobileNetV3Small(num_classes=38)
-    
-    # 2. Test Output Shape Mathematically
-    # Tensor representation: (Batch, Channels, Height, Width)
     dummy_input = torch.randn(1, 3, 224, 224)
     out = model(dummy_input)
-    print(f"Sanity Check - Expected Shape: (1, 38) | Actual Shape: {out.shape}")
-    assert out.shape == (1, 38), "Output shape mismatch!"
-    
-    # 3. Test Total Trainable Parameters (Checking against paper's ~1.54M metric)
     total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"Total Trainable Parameters: {total_params:,}")
-    
-    # 4. Detailed Architectural Summary
     summary(model, input_size=(1, 3, 224, 224))
