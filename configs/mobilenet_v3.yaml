@@ -5,6 +5,7 @@ data:
   num_workers: 4
 
 model:
+  name: "mobilenet_v3_small"
   num_classes: 38
   pretrained: true
   pretrained_path: "DEFAULT"

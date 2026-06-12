@@ -1,0 +1,28 @@
+data:
+  raw_dir: "data/raw"
+  dataset_dir: "data/split"
+  image_size: 224
+  batch_size: 32
+  num_workers: 0
+
+model:
+  name: "efficientnet_b0"
+  dropout_rate: 0.2
+  num_classes: 38
+  pretrained: true
+  pretrained_path: "DEFAULT"
+
+training:
+  epochs: 50
+  learning_rate: 0.001
+  weight_decay: 0.0
+  betas: [0.9, 0.999]
+  early_stopping_patience: 10
+  save_dir: "outputs/checkpoints"
+
+hpo:
+  n_trials: 5
+  lr_min: 1e-5
+  lr_max: 1e-3
+  weight_decay_min: 1e-6
+  weight_decay_max: 1e-3
