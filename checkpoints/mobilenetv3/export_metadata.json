@@ -1,0 +1,35 @@
+{
+  "model_name": "mobilenet_v3_small",
+  "num_classes": 38,
+  "input_size": [
+    1,
+    3,
+    224,
+    224
+  ],
+  "image_mean": [
+    0.485,
+    0.456,
+    0.406
+  ],
+  "image_std": [
+    0.229,
+    0.224,
+    0.225
+  ],
+  "exported_files": {
+    "torchscript": {
+      "path": "checkpoints/mobilenetv3\\best_model.pt",
+      "size_mb": 6.29
+    },
+    "onnx_fp32": {
+      "path": "checkpoints/mobilenetv3\\best_model.onnx",
+      "size_mb": 0.38
+    },
+    "torchscript_quantized": {
+      "path": "checkpoints/mobilenetv3\\best_model_quantized.pt",
+      "size_mb": 4.51
+    }
+  },
+  "export_timestamp": "2026-06-13 11:17:08"
+}

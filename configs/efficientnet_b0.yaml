@@ -18,7 +18,8 @@ training:
   weight_decay: 0.0
   betas: [0.9, 0.999]
   early_stopping_patience: 10
-  save_dir: "outputs/checkpoints"
+  save_dir: "checkpoints/effcientnetb0"
+  checkpoint_name: "best_model_dropout_0.2.pth"
 
 hpo:
   n_trials: 5

@@ -1,0 +1,230 @@
+{
+  "Apple___Apple_scab": {
+    "disease_vi": "Bệnh ghẻ táo",
+    "action": "Phun thuốc trừ nấm gốc Captan hoặc Myclobutanil vào đầu mùa xuân",
+    "priority": "high",
+    "description": "Bệnh ghẻ táo do nấm Venturia inaequalis gây ra. Xuất hiện các đốm nâu sẫm trên lá và quả. Cần loại bỏ lá rụng, cải thiện thông khí vườn."
+  },
+  "Apple___Black_rot": {
+    "disease_vi": "Bệnh thối đen táo",
+    "action": "Cắt bỏ cành bị nhiễm, phun thuốc trừ nấm gốc Thiophanate-methyl",
+    "priority": "high",
+    "description": "Do nấm Botryosphaeria obtusa. Gây thối quả và cháy lá. Loại bỏ quả mummified, giữ vệ sinh vườn."
+  },
+  "Apple___Cedar_apple_rust": {
+    "disease_vi": "Bệnh rỉ sắt táo",
+    "action": "Phun thuốc trừ nấm gốc Myclobutanil khi thấy triệu chứng đầu tiên",
+    "priority": "medium",
+    "description": "Do nấm Gymnosporangium juniperi-virginianae. Cần loại bỏ cây bách xù (juniper) gần vườn táo nếu có thể."
+  },
+  "Apple___healthy": {
+    "disease_vi": "Táo khỏe mạnh",
+    "action": "Tiếp tục chăm sóc định kỳ, bón phân và tưới nước đều đặn",
+    "priority": "low",
+    "description": "Cây khỏe mạnh, không phát hiện dấu hiệu bệnh. Duy trì lịch phun phòng ngừa theo mùa."
+  },
+  "Blueberry___healthy": {
+    "disease_vi": "Việt quất khỏe mạnh",
+    "action": "Duy trì pH đất 4.5-5.5, bón phân acid định kỳ",
+    "priority": "low",
+    "description": "Cây khỏe mạnh. Kiểm tra độ pH đất thường xuyên và duy trì lớp phủ gốc."
+  },
+  "Cherry_(including_sour)___Powdery_mildew": {
+    "disease_vi": "Bệnh phấn trắng anh đào",
+    "action": "Phun thuốc trừ nấm gốc Sulfur hoặc Potassium bicarbonate",
+    "priority": "medium",
+    "description": "Do nấm Podosphaera clandestina. Lá phủ lớp phấn trắng. Cải thiện thông khí, tránh tưới ướt lá."
+  },
+  "Cherry_(including_sour)___healthy": {
+    "disease_vi": "Anh đào khỏe mạnh",
+    "action": "Tiếp tục chăm sóc định kỳ, tỉa cành tạo thông khí",
+    "priority": "low",
+    "description": "Cây khỏe mạnh, không phát hiện dấu hiệu bệnh."
+  },
+  "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot": {
+    "disease_vi": "Bệnh đốm lá xám ngô",
+    "action": "Phun thuốc trừ nấm gốc Strobilurin, luân canh cây trồng",
+    "priority": "high",
+    "description": "Do nấm Cercospora zeae-maydis. Đốm hình chữ nhật xám trên lá. Luân canh và cày vùi tàn dư cây trồng."
+  },
+  "Corn_(maize)___Common_rust_": {
+    "disease_vi": "Bệnh rỉ sắt ngô",
+    "action": "Phun thuốc trừ nấm gốc Triazole nếu nhiễm nặng (>50% lá)",
+    "priority": "medium",
+    "description": "Do nấm Puccinia sorghi. Mụn rỉ sắt nâu đỏ trên lá. Sử dụng giống kháng bệnh cho vụ sau."
+  },
+  "Corn_(maize)___Northern_Leaf_Blight": {
+    "disease_vi": "Bệnh cháy lá phía bắc ngô",
+    "action": "Phun thuốc trừ nấm gốc Azoxystrobin + Propiconazole",
+    "priority": "high",
+    "description": "Do nấm Exserohilum turcicum. Vết bệnh hình thuyền dài trên lá. Luân canh và chọn giống kháng."
+  },
+  "Corn_(maize)___healthy": {
+    "disease_vi": "Ngô khỏe mạnh",
+    "action": "Tiếp tục bón phân Đạm đúng giai đoạn, kiểm tra sâu bệnh định kỳ",
+    "priority": "low",
+    "description": "Cây khỏe mạnh, không phát hiện dấu hiệu bệnh."
+  },
+  "Grape___Black_rot": {
+    "disease_vi": "Bệnh thối đen nho",
+    "action": "Phun thuốc trừ nấm gốc Mancozeb trước ra hoa, Myclobutanil sau ra hoa",
+    "priority": "high",
+    "description": "Do nấm Guignardia bidwellii. Gây thối quả và đốm lá. Loại bỏ quả mummified, tỉa cành thông thoáng."
+  },
+  "Grape___Esca_(Black_Measles)": {
+    "disease_vi": "Bệnh Esca nho (sởi đen)",
+    "action": "Cắt bỏ cành nhiễm, bôi thuốc trừ nấm lên vết cắt tỉa",
+    "priority": "high",
+    "description": "Bệnh phức hợp do nhiều loại nấm. Vằn nâu trên lá, sọc đen trên thân. Hiện chưa có thuốc đặc trị hiệu quả."
+  },
+  "Grape___Leaf_blight_(Isariopsis_Leaf_Spot)": {
+    "disease_vi": "Bệnh cháy lá nho",
+    "action": "Phun thuốc trừ nấm gốc Copper hoặc Mancozeb",
+    "priority": "medium",
+    "description": "Đốm nâu trên lá, viền vàng. Cải thiện thoát nước và thông khí giàn nho."
+  },
+  "Grape___healthy": {
+    "disease_vi": "Nho khỏe mạnh",
+    "action": "Tiếp tục tỉa cành định kỳ, bón phân Kali trước mùa quả",
+    "priority": "low",
+    "description": "Cây khỏe mạnh, không phát hiện dấu hiệu bệnh."
+  },
+  "Orange___Haunglongbing_(Citrus_greening)": {
+    "disease_vi": "Bệnh vàng lá greening cam",
+    "action": "Kiểm soát rầy chổng cánh (Diaphorina citri), loại bỏ cây nhiễm nặng",
+    "priority": "critical",
+    "description": "Do vi khuẩn Candidatus Liberibacter. Bệnh cực kỳ nghiêm trọng, KHÔNG có thuốc chữa. Quả méo, vị đắng. Phải tiêu hủy cây nhiễm."
+  },
+  "Peach___Bacterial_spot": {
+    "disease_vi": "Bệnh đốm vi khuẩn đào",
+    "action": "Phun thuốc gốc Copper hydroxide vào đầu mùa, tránh tưới phun",
+    "priority": "medium",
+    "description": "Do vi khuẩn Xanthomonas arboricola. Đốm nước trên lá, nứt quả. Chọn giống kháng bệnh."
+  },
+  "Peach___healthy": {
+    "disease_vi": "Đào khỏe mạnh",
+    "action": "Tỉa cành tạo tán thông thoáng, phun phòng nấm đầu mùa xuân",
+    "priority": "low",
+    "description": "Cây khỏe mạnh, không phát hiện dấu hiệu bệnh."
+  },
+  "Pepper,_bell___Bacterial_spot": {
+    "disease_vi": "Bệnh đốm vi khuẩn ớt chuông",
+    "action": "Phun thuốc gốc Copper + Mancozeb, luân canh 2-3 năm",
+    "priority": "high",
+    "description": "Do vi khuẩn Xanthomonas. Đốm nước trên lá, quả. Sử dụng hạt giống sạch bệnh, tránh tưới phun."
+  },
+  "Pepper,_bell___healthy": {
+    "disease_vi": "Ớt chuông khỏe mạnh",
+    "action": "Tiếp tục bón phân cân đối NPK, duy trì độ ẩm đất ổn định",
+    "priority": "low",
+    "description": "Cây khỏe mạnh, không phát hiện dấu hiệu bệnh."
+  },
+  "Potato___Early_blight": {
+    "disease_vi": "Bệnh cháy sớm khoai tây",
+    "action": "Phun thuốc trừ nấm gốc Chlorothalonil hoặc Mancozeb, luân canh",
+    "priority": "high",
+    "description": "Do nấm Alternaria solani. Đốm đồng tâm nâu trên lá già. Bón phân đầy đủ, tránh stress nước."
+  },
+  "Potato___Late_blight": {
+    "disease_vi": "Bệnh mốc sương khoai tây",
+    "action": "Phun thuốc trừ nấm gốc Metalaxyl + Mancozeb NGAY LẬP TỨC",
+    "priority": "critical",
+    "description": "Do nấm Phytophthora infestans. CỰC KỲ NGUY HIỂM, lây lan rất nhanh. Đốm nước xám xanh trên lá, mốc trắng mặt dưới."
+  },
+  "Potato___healthy": {
+    "disease_vi": "Khoai tây khỏe mạnh",
+    "action": "Tiếp tục vun gốc, kiểm tra sâu bệnh định kỳ",
+    "priority": "low",
+    "description": "Cây khỏe mạnh, không phát hiện dấu hiệu bệnh."
+  },
+  "Raspberry___healthy": {
+    "disease_vi": "Mâm xôi khỏe mạnh",
+    "action": "Tỉa cành cũ sau thu hoạch, bón phân hữu cơ",
+    "priority": "low",
+    "description": "Cây khỏe mạnh, không phát hiện dấu hiệu bệnh."
+  },
+  "Soybean___healthy": {
+    "disease_vi": "Đậu nành khỏe mạnh",
+    "action": "Kiểm tra rệp và sâu đục quả định kỳ",
+    "priority": "low",
+    "description": "Cây khỏe mạnh, không phát hiện dấu hiệu bệnh."
+  },
+  "Squash___Powdery_mildew": {
+    "disease_vi": "Bệnh phấn trắng bí",
+    "action": "Phun thuốc trừ nấm gốc Sulfur hoặc Potassium bicarbonate",
+    "priority": "medium",
+    "description": "Do nấm Podosphaera xanthii. Lớp phấn trắng trên lá. Tưới gốc, không tưới lá, cải thiện thông khí."
+  },
+  "Strawberry___Leaf_scorch": {
+    "disease_vi": "Bệnh cháy lá dâu tây",
+    "action": "Phun thuốc trừ nấm gốc Copper, loại bỏ lá nhiễm",
+    "priority": "medium",
+    "description": "Do nấm Diplocarpon earlianum. Đốm tím đỏ nhỏ trên lá, lan rộng thành mảng cháy. Cải thiện thoát nước."
+  },
+  "Strawberry___healthy": {
+    "disease_vi": "Dâu tây khỏe mạnh",
+    "action": "Phủ gốc bằng rơm, kiểm tra nhện đỏ định kỳ",
+    "priority": "low",
+    "description": "Cây khỏe mạnh, không phát hiện dấu hiệu bệnh."
+  },
+  "Tomato___Bacterial_spot": {
+    "disease_vi": "Bệnh đốm vi khuẩn cà chua",
+    "action": "Phun thuốc gốc Copper hydroxide + Mancozeb, luân canh 3 năm",
+    "priority": "high",
+    "description": "Do vi khuẩn Xanthomonas. Đốm nước nhỏ trên lá, quả. Sử dụng hạt giống xử lý nhiệt, tránh tưới phun."
+  },
+  "Tomato___Early_blight": {
+    "disease_vi": "Bệnh cháy sớm cà chua",
+    "action": "Phun thuốc trừ nấm gốc Mancozeb hoặc Chlorothalonil",
+    "priority": "high",
+    "description": "Do nấm Alternaria solani. Đốm đồng tâm nâu trên lá già. Cắt bỏ lá bệnh, cải thiện thông khí."
+  },
+  "Tomato___Late_blight": {
+    "disease_vi": "Bệnh mốc sương cà chua",
+    "action": "Phun thuốc trừ nấm gốc Metalaxyl + Mancozeb KHẨN CẤP",
+    "priority": "critical",
+    "description": "Do nấm Phytophthora infestans. NGUY HIỂM, lây lan cực nhanh trong điều kiện ẩm ướt. Tiêu hủy cây nhiễm nặng."
+  },
+  "Tomato___Leaf_Mold": {
+    "disease_vi": "Bệnh mốc lá cà chua",
+    "action": "Cải thiện thông khí nhà kính, phun thuốc trừ nấm gốc Chlorothalonil",
+    "priority": "medium",
+    "description": "Do nấm Passalora fulva. Đốm vàng mặt trên lá, mốc xám mặt dưới. Giảm độ ẩm, tăng khoảng cách trồng."
+  },
+  "Tomato___Septoria_leaf_spot": {
+    "disease_vi": "Bệnh đốm lá Septoria cà chua",
+    "action": "Phun thuốc trừ nấm gốc Chlorothalonil hoặc Mancozeb mỗi 7-10 ngày",
+    "priority": "high",
+    "description": "Do nấm Septoria lycopersici. Nhiều đốm tròn nhỏ với tâm xám, viền nâu. Cắt bỏ lá dưới thấp, phủ gốc."
+  },
+  "Tomato___Spider_mites Two-spotted_spider_mite": {
+    "disease_vi": "Nhện đỏ hai chấm cà chua",
+    "action": "Phun thuốc trừ nhện (Abamectin hoặc dầu Neem), tăng độ ẩm không khí",
+    "priority": "high",
+    "description": "Do nhện Tetranychus urticae. Lá vàng, có mạng nhện mịn mặt dưới. Phun nước mạnh rửa nhện, dùng thiên địch."
+  },
+  "Tomato___Target_Spot": {
+    "disease_vi": "Bệnh đốm bia cà chua",
+    "action": "Phun thuốc trừ nấm gốc Chlorothalonil, cắt bỏ lá dưới thấp",
+    "priority": "medium",
+    "description": "Do nấm Corynespora cassiicola. Đốm đồng tâm có viền vàng trên lá. Cải thiện thông khí."
+  },
+  "Tomato___Tomato_Yellow_Leaf_Curl_Virus": {
+    "disease_vi": "Virus xoăn vàng lá cà chua",
+    "action": "Kiểm soát bọ phấn trắng (Bemisia tabaci), nhổ bỏ cây nhiễm",
+    "priority": "critical",
+    "description": "Do virus TYLCV, truyền qua bọ phấn trắng. KHÔNG có thuốc chữa. Lá xoăn vàng, còi cọc. Sử dụng giống kháng, lưới chắn côn trùng."
+  },
+  "Tomato___Tomato_mosaic_virus": {
+    "disease_vi": "Virus khảm cà chua",
+    "action": "Nhổ bỏ cây nhiễm, khử trùng dụng cụ bằng sữa loãng 10%",
+    "priority": "high",
+    "description": "Do virus ToMV. KHÔNG có thuốc chữa. Lá loang lổ xanh nhạt/đậm. Lây qua tiếp xúc cơ học. Rửa tay trước khi chạm cây."
+  },
+  "Tomato___healthy": {
+    "disease_vi": "Cà chua khỏe mạnh",
+    "action": "Tiếp tục bón phân Canxi định kỳ, tỉa chồi nách",
+    "priority": "low",
+    "description": "Cây khỏe mạnh, không phát hiện dấu hiệu bệnh. Duy trì chế độ tưới đều đặn."
+  }
+}

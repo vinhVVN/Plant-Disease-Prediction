@@ -8,7 +8,8 @@ def export_model_for_edge(config_path="configs/mobilenet_v3.yaml"):
         config = yaml.safe_load(f)
         
     save_dir = config['training']['save_dir']
-    checkpoint_path = os.path.join(save_dir, "best_model.pth")
+    checkpoint_name = config['training'].get('checkpoint_name', 'best_model.pth')
+    checkpoint_path = os.path.join(save_dir, checkpoint_name)
     
     if not os.path.exists(checkpoint_path):
         print(f"Error: Checkpoint {checkpoint_path} not found. Ensure the model has been trained.")
@@ -39,7 +40,7 @@ def export_model_for_edge(config_path="configs/mobilenet_v3.yaml"):
             dummy_input,
             onnx_path,
             export_params=True,
-            opset_version=18,
+            opset_version=13,
             do_constant_folding=True,
             input_names=['input'],
             output_names=['output']

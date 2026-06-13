@@ -1,2 +1,41 @@
 /references
-/src/data/__pycache__/*
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# cache
+.cache/
+.parcel-cache/
+
+# TypeScript
+*.tsbuildinfo
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

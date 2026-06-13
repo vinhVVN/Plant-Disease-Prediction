@@ -1,3 +1,6 @@
+import sys
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8')
 import argparse
 import yaml
 import torch
@@ -8,24 +11,30 @@ from src.data.dataset import PlantVillageDataset
 from src.data.transforms import get_transforms
 from src.engine.train import Trainer
 from src.engine.evaluate import evaluate_model
-from src.engine.tune import tune_hyperparameters
 from src.engine.export import export_model_for_edge
 
 def main():
     parser = argparse.ArgumentParser(description="Plant Disease Classification")
     parser.add_argument("--config", type=str, required=True, help="Path to YAML config file")
-    parser.add_argument("--mode", type=str, required=True, choices=["train", "evaluate", "tune", "export"], help="Execution mode")
+    parser.add_argument("--mode", type=str, required=True, choices=["train", "evaluate", "tune", "export", "verify"], help="Execution mode")
+    parser.add_argument("--image", type=str, default="test_image.jpg", help="Test image for verify mode")
     args = parser.parse_args()
 
     with open(args.config, 'r') as f:
         config = yaml.safe_load(f)
 
     if args.mode == "tune":
+        from src.engine.tune import tune_hyperparameters
         tune_hyperparameters(args.config)
         return
         
     if args.mode == "export":
         export_model_for_edge(args.config)
+        return
+
+    if args.mode == "verify":
+        from verify_export import verify_model
+        verify_model(args.config, args.image)
         return
 
     # Setup for train or evaluate
