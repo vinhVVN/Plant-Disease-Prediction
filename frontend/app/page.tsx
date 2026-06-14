@@ -4,22 +4,41 @@ import React, { useEffect, useState } from "react";
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
 } from "recharts";
-import { Activity, ShieldAlert, Thermometer, FlaskConical, Clock, Plus, Check } from "lucide-react";
-import { PredictionRecord, getAllPredictions, addIntervention } from "../lib/db";
+import { Activity, ShieldAlert, Thermometer, FlaskConical, Clock, Plus, Check, Sprout } from "lucide-react";
+import { PredictionRecord, PlantRecord, getAllPredictions, addIntervention, getAllPlants } from "../lib/db";
 
 export default function DashboardPage() {
   const [history, setHistory] = useState<PredictionRecord[]>([]);
+  const [plants, setPlants] = useState<PlantRecord[]>([]);
+  const [selectedPlantId, setSelectedPlantId] = useState<string>("ALL");
   const [loading, setLoading] = useState(true);
   const [interventionInput, setInterventionInput] = useState<{ id: number, text: string } | null>(null);
 
   useEffect(() => {
-    loadData();
+    loadPlants();
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [selectedPlantId]);
+
+  const loadPlants = async () => {
+    try {
+      const p = await getAllPlants();
+      setPlants(p);
+      if (p.length > 0 && selectedPlantId === "ALL") {
+        setSelectedPlantId(p[0].id);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const data = await getAllPredictions(50);
+      // Nếu chọn "ALL" thì fetch tất cả, hoặc không filter. Ở đây ta ưu tiên xem từng cây.
+      const data = await getAllPredictions(selectedPlantId === "ALL" ? undefined : selectedPlantId, 50);
       setHistory(data);
     } catch (err) {
       console.error("Failed to load history", err);
@@ -100,15 +119,42 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-slate-50 text-slate-800 p-6 lg:p-10 pb-24">
       <div className="max-w-7xl mx-auto space-y-8">
         
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 flex items-center gap-3">
-            <Activity className="w-8 h-8 text-indigo-600" />
-            Longitudinal Treatment Tracker
-          </h1>
-          <p className="text-slate-500 mt-2 text-lg">
-            Theo dõi diễn tiến bệnh học và đánh giá hiệu quả phác đồ điều trị theo thời gian thực.
-          </p>
+        {/* Header & Plant Selector */}
+        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 flex items-center gap-3">
+              <Activity className="w-8 h-8 text-indigo-600" />
+              Longitudinal Treatment Tracker
+            </h1>
+            <p className="text-slate-500 mt-2 text-lg">
+              Theo dõi diễn tiến bệnh học và đánh giá hiệu quả phác đồ điều trị theo thời gian thực.
+            </p>
+          </div>
+          
+          <div className="bg-white border border-slate-200 p-2 rounded-2xl shadow-sm flex items-center gap-3 min-w-[250px]">
+            <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center shrink-0">
+              <Sprout className="w-5 h-5 text-teal-600" />
+            </div>
+            <div className="flex-1">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Hồ sơ cây trồng</p>
+              <select 
+                value={selectedPlantId}
+                onChange={(e) => setSelectedPlantId(e.target.value)}
+                className="w-full text-slate-800 font-bold bg-transparent outline-none cursor-pointer"
+              >
+                {plants.length === 0 ? (
+                  <option value="ALL">Chưa có hồ sơ nào</option>
+                ) : (
+                  <>
+                    <option value="ALL">-- Tất cả hồ sơ --</option>
+                    {plants.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </>
+                )}
+              </select>
+            </div>
+          </div>
         </div>
 
         {/* Khu vực 1: Quick Stats */}

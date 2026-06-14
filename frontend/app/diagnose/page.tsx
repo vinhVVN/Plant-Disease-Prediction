@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { runCloudInference, CloudPredictionResult } from "@/lib/api";
-import { compressImage, savePrediction } from "@/lib/db";
+import { compressImage, savePrediction, getAllPlants, createPlant, PlantRecord } from "@/lib/db";
 import dynamic from "next/dynamic";
 
 // Dynamic Imports to prevent Hydration Mismatch
@@ -30,6 +30,21 @@ export default function DiagnosticReportPage() {
   const [isInferring, setIsInferring] = useState(false);
   const [cloudResult, setCloudResult] = useState<CloudPredictionResult | null>(null);
   const [inferenceTime, setInferenceTime] = useState<number | null>(null);
+  
+  // Plant Profile Save States
+  const [plants, setPlants] = useState<PlantRecord[]>([]);
+  const [selectedPlantId, setSelectedPlantId] = useState<string>('');
+  const [newPlantName, setNewPlantName] = useState<string>('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasSaved, setHasSaved] = useState(false);
+
+  React.useEffect(() => {
+    getAllPlants().then(p => {
+      setPlants(p);
+      if (p.length > 0) setSelectedPlantId(p[0].id);
+      else setSelectedPlantId('NEW');
+    });
+  }, []);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -38,6 +53,7 @@ export default function DiagnosticReportPage() {
       setImage(file);
       setPreview(URL.createObjectURL(file));
       setCloudResult(null);
+      setHasSaved(false);
     }
   };
 
@@ -45,6 +61,7 @@ export default function DiagnosticReportPage() {
     if (!image) return;
     setIsInferring(true);
     setCloudResult(null);
+    setHasSaved(false);
 
     try {
       const start = performance.now();
@@ -52,24 +69,46 @@ export default function DiagnosticReportPage() {
       const end = performance.now();
       setInferenceTime(end - start);
       setCloudResult(res);
-      
-      // Save to IndexedDB for Longitudinal Tracking
-      try {
-        const thumbnail = await compressImage(image, 200, 0.6);
-        await savePrediction({
-          imageThumbnail: thumbnail,
-          predictedClass: res.predicted_class,
-          severityPercentage: res.xai.severity.percentage,
-          intervention: null
-        });
-      } catch (dbErr) {
-        console.error("Failed to save to history DB:", dbErr);
-      }
-      
     } catch (e) {
       alert("Lỗi khi gọi API Cloud!");
     } finally {
       setIsInferring(false);
+    }
+  };
+
+  const handleSavePrediction = async () => {
+    if (!image || !cloudResult) return;
+    if (selectedPlantId === 'NEW' && !newPlantName.trim()) {
+      alert("Vui lòng nhập tên cho cây mới.");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      let plantIdToSave = selectedPlantId;
+      if (selectedPlantId === 'NEW') {
+        plantIdToSave = await createPlant(newPlantName.trim());
+        // Refresh plant list
+        const p = await getAllPlants();
+        setPlants(p);
+        setSelectedPlantId(plantIdToSave);
+      }
+
+      const thumbnail = await compressImage(image, 200, 0.6);
+      await savePrediction({
+        plantId: plantIdToSave,
+        imageThumbnail: thumbnail,
+        predictedClass: cloudResult.predicted_class,
+        severityPercentage: cloudResult.xai.severity.percentage,
+        intervention: null
+      });
+
+      setHasSaved(true);
+    } catch (err) {
+      console.error(err);
+      alert("Lỗi khi lưu hồ sơ.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -243,6 +282,46 @@ export default function DiagnosticReportPage() {
         {/* ----------------- CLOUD RESULTS (MEDICAL REPORT) ----------------- */}
         {!isInferring && cloudResult && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 mt-8">
+
+            {/* Lưu Hồ Sơ Card */}
+            <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-3xl shadow-sm flex flex-col md:flex-row items-center gap-6 justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-indigo-900 mb-1">Lưu Hồ Sơ Chẩn Đoán</h3>
+                <p className="text-indigo-700/80 text-sm">Chọn một cây để theo dõi diễn tiến bệnh học, hoặc tạo hồ sơ mới.</p>
+              </div>
+              <div className="flex flex-col sm:flex-row w-full md:w-auto items-center gap-3">
+                {selectedPlantId === 'NEW' ? (
+                  <input 
+                    type="text" 
+                    placeholder="Nhập tên cây mới..." 
+                    className="px-4 py-3 rounded-xl border border-indigo-200 outline-none w-full sm:w-48 text-sm"
+                    value={newPlantName}
+                    onChange={(e) => setNewPlantName(e.target.value)}
+                  />
+                ) : (
+                  <select 
+                    value={selectedPlantId} 
+                    onChange={(e) => setSelectedPlantId(e.target.value)}
+                    className="px-4 py-3 rounded-xl border border-indigo-200 outline-none w-full sm:w-48 text-sm bg-white"
+                  >
+                    {plants.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    <option value="NEW">+ Tạo cây mới</option>
+                  </select>
+                )}
+                
+                {selectedPlantId === 'NEW' && (
+                  <button onClick={() => setSelectedPlantId(plants.length > 0 ? plants[0].id : '')} className="text-xs text-indigo-600 font-bold px-2">Hủy</button>
+                )}
+                
+                <button 
+                  onClick={handleSavePrediction}
+                  disabled={isSaving || hasSaved || (selectedPlantId === 'NEW' && !newPlantName.trim()) || (!selectedPlantId && selectedPlantId !== 'NEW')}
+                  className="w-full sm:w-auto px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white rounded-xl font-bold shadow-md transition-colors whitespace-nowrap"
+                >
+                  {isSaving ? 'Đang lưu...' : hasSaved ? '✓ Đã Lưu' : 'Lưu Hồ Sơ'}
+                </button>
+              </div>
+            </div>
 
             {/* Uncertainty Alert */}
             {cloudResult.uncertainty_warning && (

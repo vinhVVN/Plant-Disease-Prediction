@@ -4,8 +4,15 @@ import { openDB, DBSchema, IDBPDatabase } from 'idb';
 const MAX_IMAGE_WIDTH = 800;
 const JPEG_QUALITY = 0.8;
 
+export interface PlantRecord {
+  id: string;
+  name: string;
+  createdAt: number;
+}
+
 export interface PredictionRecord {
   id?: number;
+  plantId: string;          // Foreign key liên kết với PlantRecord
   imageThumbnail: Blob;     // Ảnh thumbnail nén
   predictedClass: string;
   severityPercentage: number;
@@ -14,24 +21,44 @@ export interface PredictionRecord {
 }
 
 interface AgroVisionDB extends DBSchema {
+  plants: {
+    key: string;
+    value: PlantRecord;
+    indexes: { 'by-date': number };
+  };
   predictions: {
     key: number;
     value: PredictionRecord;
-    indexes: { 'by-date': number };
+    indexes: { 
+      'by-date': number;
+      'by-plant': string;
+    };
   };
 }
 
 let dbPromise: Promise<IDBPDatabase<AgroVisionDB>> | null = null;
 
 if (typeof window !== 'undefined') {
-  dbPromise = openDB<AgroVisionDB>('agrovision_db', 2, {
+  dbPromise = openDB<AgroVisionDB>('agrovision_db', 3, {
     upgrade(db, oldVersion, newVersion, transaction) {
+      if (!db.objectStoreNames.contains('plants')) {
+        const plantStore = db.createObjectStore('plants', { keyPath: 'id' });
+        plantStore.createIndex('by-date', 'createdAt');
+      }
+      
       if (!db.objectStoreNames.contains('predictions')) {
-        const store = db.createObjectStore('predictions', {
+        const predStore = db.createObjectStore('predictions', {
           keyPath: 'id',
           autoIncrement: true,
         });
-        store.createIndex('by-date', 'createdAt');
+        predStore.createIndex('by-date', 'createdAt');
+        predStore.createIndex('by-plant', 'plantId');
+      } else {
+        // Nếu đã có bảng predictions từ version cũ, ta tạo thêm index by-plant
+        const predStore = transaction.objectStore('predictions');
+        if (!predStore.indexNames.contains('by-plant')) {
+          predStore.createIndex('by-plant', 'plantId');
+        }
       }
     },
   });
@@ -81,6 +108,47 @@ export async function compressImage(blob: Blob, maxWidth: number = MAX_IMAGE_WID
 }
 
 /**
+ * Tạo một hồ sơ cây trồng mới
+ */
+export async function createPlant(name: string): Promise<string> {
+  if (!dbPromise) throw new Error("DB not initialized");
+  const db = await dbPromise;
+  
+  const id = Math.random().toString(36).substring(2, 15);
+  const record: PlantRecord = {
+    id,
+    name,
+    createdAt: Date.now(),
+  };
+  
+  await db.add('plants', record);
+  return id;
+}
+
+/**
+ * Lấy danh sách tất cả hồ sơ cây trồng
+ */
+export async function getAllPlants(): Promise<PlantRecord[]> {
+  if (!dbPromise) return [];
+  const db = await dbPromise;
+  
+  const tx = db.transaction('plants', 'readonly');
+  const store = tx.objectStore('plants');
+  const index = store.index('by-date');
+  
+  const cursor = await index.openCursor(null, 'prev');
+  const results: PlantRecord[] = [];
+  
+  let current = cursor;
+  while (current) {
+    results.push(current.value);
+    current = await current.continue();
+  }
+  
+  return results;
+}
+
+/**
  * Lưu lịch sử chẩn đoán vào IndexedDB
  */
 export async function savePrediction(record: Omit<PredictionRecord, 'id' | 'createdAt'>) {
@@ -96,18 +164,25 @@ export async function savePrediction(record: Omit<PredictionRecord, 'id' | 'crea
 }
 
 /**
- * Lấy lịch sử chẩn đoán
+ * Lấy lịch sử chẩn đoán (có thể lọc theo plantId)
  */
-export async function getAllPredictions(limit: number = 50): Promise<PredictionRecord[]> {
+export async function getAllPredictions(plantId?: string, limit: number = 100): Promise<PredictionRecord[]> {
   if (!dbPromise) return [];
   const db = await dbPromise;
   
   const tx = db.transaction('predictions', 'readonly');
   const store = tx.objectStore('predictions');
-  const index = store.index('by-date');
   
-  // Lấy danh sách mới nhất
-  const cursor = await index.openCursor(null, 'prev');
+  let cursor;
+  if (plantId) {
+    // Nếu có plantId, truy vấn qua index by-plant
+    const index = store.index('by-plant');
+    cursor = await index.openCursor(IDBKeyRange.only(plantId));
+  } else {
+    const index = store.index('by-date');
+    cursor = await index.openCursor(null, 'prev');
+  }
+  
   const results: PredictionRecord[] = [];
   
   let current = cursor;
@@ -116,8 +191,10 @@ export async function getAllPredictions(limit: number = 50): Promise<PredictionR
     current = await current.continue();
   }
   
-  // Đảo ngược mảng để trả về theo thứ tự thời gian tăng dần cho biểu đồ (Cũ -> Mới)
-  return results.reverse();
+  // Sắp xếp lại theo createdAt tăng dần cho biểu đồ (Cũ -> Mới)
+  results.sort((a, b) => a.createdAt - b.createdAt);
+  
+  return results;
 }
 
 /**
