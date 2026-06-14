@@ -1,0 +1,31 @@
+export interface CloudPredictionResult {
+  predicted_class: string;
+  confidence: number;
+  top5: { class: string; prob: number }[];
+  gradcam_heatmap: string;
+  gradcam_overlay: string;
+  inference_time_ms: number;
+  recommendation: {
+    action: string;
+    priority: string;
+    description: string;
+  };
+}
+
+export async function runCloudInference(imageFile: File, modelName: string = 'efficientnetb0'): Promise<CloudPredictionResult> {
+  const formData = new FormData();
+  formData.append('file', imageFile);
+  formData.append('model_name', modelName);
+
+  const response = await fetch('http://localhost:8000/api/predict', {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Cloud API Error: ${response.statusText}`);
+  }
+
+  const data: CloudPredictionResult = await response.json();
+  return data;
+}

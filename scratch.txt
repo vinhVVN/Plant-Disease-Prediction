@@ -1,0 +1,551 @@
+import kagglehub
+
+path = kagglehub.dataset_download("thnhvinhs/spmohanty-plantvillage-dataset")
+
+print("Path to dataset files:", path)
+!pip install torchinfo albumentations optuna pyyaml -q
+# os.chdir('/kaggle/working')
+# !rm -rf /kaggle/working/Plant-Disease-Prediction
+!git clone https://github.com/vinhVVN/Plant-Disease-Prediction.git
+import os
+import sys
+import random
+import numpy as np
+import torch
+import warnings
+
+project_dir = '/kaggle/working/Plant-Disease-Prediction'
+if project_dir not in sys.path:
+    sys.path.append(project_dir)
+
+def seed_everything(seed=42):
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+seed_everything(42)
+import yaml
+import matplotlib.pyplot as plt
+import pandas as pd
+from collections import Counter
+from torchvision.utils import make_grid
+from torch.utils.data import DataLoader
+from src.data.dataset import PlantVillageDataset
+from src.data.transforms import get_baseline_transforms
+os.chdir(project_dir)
+with open('configs/default_config.yaml', 'r') as f:
+    config = yaml.safe_load(f)
+
+dataset_dir = config['data']['dataset_dir']
+
+if os.path.exists(dataset_dir):
+    dataset = PlantVillageDataset(dataset_dir, transform=get_baseline_transforms(224))
+    class_counts = Counter(dataset.labels)
+    
+    # In bảng phân phối
+    distribution_data = {
+        "Class Index": list(class_counts.keys()),
+        "Class Name": [dataset.classes[idx] for idx in class_counts.keys()],
+        "Number of Images": list(class_counts.values())
+    }
+    df_dist = pd.DataFrame(distribution_data).sort_values("Number of Images", ascending=False)
+    
+    print("\nPhân phối dữ liệu của PlantVillage")
+    display(df_dist.style.background_gradient(cmap='Blues'))
+    print(f"\nTổng số ảnh phát hiện: {sum(class_counts.values())} across {len(class_counts)} classes.\n")
+    
+    # Render lưới ảnh mẫu (2x4 Grid) để xác thực Pipeline biến đổi dữ liệu
+    loader = DataLoader(dataset, batch_size=8, shuffle=True)
+    images, labels = next(iter(loader))
+    
+    # Hàm Unnormalize
+    def imshow(img, title):
+        img = img.numpy().transpose((1, 2, 0))
+        mean = np.array([0.485, 0.456, 0.406])
+        std = np.array([0.229, 0.224, 0.225])
+        img = std * img + mean
+        img = np.clip(img, 0, 1)
+        plt.imshow(img)
+        plt.title(title, fontsize=10)
+        plt.axis('off')
+        
+    plt.figure(figsize=(16, 8))
+    for i in range(8):
+        plt.subplot(2, 4, i + 1)
+        imshow(images[i], title=dataset.classes[labels[i].item()])
+    plt.suptitle("Sample Preprocessed Images (Unnormalized)", fontsize=16)
+    plt.tight_layout()
+    plt.show()
+else:
+    print(f"WARNING: Data Directory '{dataset_dir}' not found. Attach Dataset on Kaggle.")
+
+from src.models.factory import MobileNetV3Small
+from torchinfo import summary
+
+with open('configs/default_config.yaml', 'r') as f:
+    config = yaml.safe_load(f)
+
+dataset_dir = config['data']['dataset_dir']
+
+# Khởi tạo mô hình tự xây dựng 
+model = MobileNetV3Small(num_classes=config['model']['num_classes'])
+
+# số lượng tham số huấn luyện
+total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+print(f"Tổng số tham số học được (Trainable Parameters): {total_params:,}")
+
+# In cấu trúc bảng kiến trúc tổng quan
+print("\n Cấu trúc tổng quan của model")
+summary(model, input_size=(1, 3, 224, 224))
+from src.utils.weight_loader import migrate_imagenet_weights
+
+try:
+    model = migrate_imagenet_weights(model, num_classes=config['model']['num_classes'])
+    print("Trọng số ImageNet nạp thành công!")
+except Exception as e:
+    print(f"Mismatch Architecture. {e}")
+# OPTUNA HYPERPARAMETER TUNING
+from src.engine.tune import tune_hyperparameters
+
+print("Tìm kiếm Siêu tham số tối ưu")
+tune_hyperparameters() 
+# VÒNG LẶP HUẤN LUYỆN CHÍNH (Training Engine)
+from src.engine.train import train_model
+
+os.chdir('/kaggle/working/Plant-Disease-Prediction')
+config_path = "configs/default_config.yaml"
+with open(config_path, 'r') as f:
+    current_config = yaml.safe_load(f)
+
+current_config['training']['epochs'] = 50
+current_config['training']['save_dir'] = "checkpoints"
+with open(config_path, 'w') as f:
+    yaml.safe_dump(current_config, f, default_flow_style=False)
+    
+# Khởi chạy hàm train_model. (Đảm bảo train_model trả về history_dict chứa mảng loss và metric)
+history = train_model(config_path="configs/default_config.yaml")
+
+import torch
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.metrics import classification_report, confusion_matrix
+from src.utils.visualization import extract_features_and_tsne
+from src.models.factory import MobileNetV3Small
+from torch.utils.data import DataLoader
+from IPython.display import Image, display
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+if os.path.exists('checkpoints/mobilenetv3/best_model.pth') and 'history' in locals() and history is not None:
+    # BIỂU ĐỒ HỘI TỤ
+    epochs = range(1, len(history['train_loss']) + 1)
+    fig, axes = plt.subplots(1, 2, figsize=(16, 5))
+    
+    # Figure 5: Epoch-to-Loss
+    axes[0].plot(epochs, history['train_loss'], label='Train Loss', color='blue')
+    axes[0].plot(epochs, history['val_loss'], label='Val Loss', color='orange')
+    axes[0].set_title('Figure 5: Training & Validation Loss', fontsize=14)
+    axes[0].set_xlabel('Epochs')
+    axes[0].set_ylabel('Cross-Entropy Loss')
+    axes[0].legend()
+    axes[0].grid(True, linestyle='--', alpha=0.6)
+    
+    # Figure 6: Epoch-to-Accuracy
+    axes[1].plot(epochs, history['train_acc'], label='Train Accuracy', color='green')
+    axes[1].plot(epochs, history['val_acc'], label='Val Accuracy', color='red')
+    axes[1].set_title('Figure 6: Training & Validation Accuracy', fontsize=14)
+    axes[1].set_xlabel('Epochs')
+    axes[1].set_ylabel('Accuracy')
+    axes[1].legend()
+    axes[1].grid(True, linestyle='--', alpha=0.6)
+    plt.tight_layout()
+    plt.show()
+best_model = MobileNetV3Small(num_classes=config['model']['num_classes'])
+best_model.load_state_dict(torch.load('checkpoints/mobilenetv3/best_model.pth', map_location=device))
+best_model = best_model.to(device)
+best_model.eval()
+
+# Tái tạo Validation Set cho Evaluation
+val_dataset_full = PlantVillageDataset(dataset_dir, transform=get_baseline_transforms(224))
+generator = torch.Generator().manual_seed(42)
+indices = torch.randperm(len(val_dataset_full), generator=generator).tolist()
+train_size = int(0.8 * len(val_dataset_full))
+val_dataset = torch.utils.data.Subset(val_dataset_full, indices[train_size:])
+val_loader = DataLoader(val_dataset, batch_size=64, shuffle=False)
+
+all_preds = []
+all_labels = []
+with torch.no_grad():
+    for imgs, lbls in val_loader:
+        outputs = best_model(imgs.to(device))
+        preds = torch.argmax(outputs, dim=1).cpu().numpy()
+        all_preds.extend(preds)
+        all_labels.extend(lbls.numpy())
+target_names = val_dataset_full.classes
+print("\nClassification Report")
+print(classification_report(all_labels, all_preds, target_names=target_names, digits=4))
+# CONFUSION MATRIX HEATMAP
+cm = confusion_matrix(all_labels, all_preds)
+plt.figure(figsize=(16, 14))
+sns.heatmap(cm, annot=False, cmap='Blues', fmt='g', xticklabels=target_names, yticklabels=target_names)
+plt.title('Complete 38x38 Confusion Matrix Heatmap', fontsize=16)
+plt.xlabel('Predicted Class', fontsize=12)
+plt.ylabel('True Class', fontsize=12)
+plt.xticks(rotation=90)
+plt.yticks(rotation=0)
+plt.tight_layout()
+plt.show()
+# t-SNE VISUALIZATION
+# Lấy ngẫu nhiên 1000 mẫu để vẽ t-SNE nhằm tiết kiệm RAM
+
+tsne_subset_indices = torch.randperm(len(val_dataset_full))[:1000]
+tsne_subset = torch.utils.data.Subset(val_dataset_full, tsne_subset_indices)
+tsne_loader = DataLoader(tsne_subset, batch_size=64, shuffle=False)
+
+extract_features_and_tsne(best_model, tsne_loader, device, save_path="tsne_figure7.png")
+
+print("\n T-SNE 1024-D Latent Space Projection")
+display(Image("tsne_figure7.png"))
+!pip install onnxscript
+
+import os
+from src.engine.export import export_model_for_edge
+
+os.chdir('/kaggle/working/Plant-Disease-Prediction')
+export_model_for_edge(config_path="configs/default_config.yaml")
+
+
+orig_path = "checkpoints/mobilenetv3/best_model.pth"
+quant_path = "checkpoints/mobilenetv3/best_model_quantized.pt"
+
+if os.path.exists(orig_path) and os.path.exists(quant_path):
+    orig_size = os.path.getsize(orig_path) / (1024 * 1024)
+    quant_size = os.path.getsize(quant_path) / (1024 * 1024)
+    
+    print(f"Original Checkpoint Size (.pth): {orig_size:.2f} MB")
+    print(f"Quantized TorchScript Size (.pt): {quant_size:.2f} MB")
+    print(f"Compression Ratio: {orig_size / quant_size:.2f}x smaller")
+import os
+import subprocess
+from IPython.display import FileLink, display
+
+def download_file(path, download_file_name):
+    os.chdir('/kaggle/working/')
+    zip_name = f"/kaggle/working/{download_file_name}.zip"
+    command = f"zip {zip_name} {path} -r"
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    if result.returncode != 0:
+        print("Unable to run zip command!")
+        print(result.stderr)
+        return
+    display(FileLink(f'{download_file_name}.zip'))
+    os.chdir('/kaggle/working/Plant-Disease-Prediction')
+
+download_file('/kaggle/working/Plant-Disease-Prediction/checkpoints', 'out')
+
+import time
+import torch
+import numpy as np
+from sklearn.metrics import accuracy_score, f1_score
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+
+# 1. TRÍCH XUẤT TẬP TEST BẢO ĐẢM KHÔNG RÒ RỈ DỮ LIỆU (DATA LEAKAGE)
+# Sử dụng cùng seed=42 để giữ cấu trúc chia giống file train.py
+val_test_dataset = PlantVillageDataset(dataset_dir, transform=get_baseline_transforms(224))
+generator = torch.Generator().manual_seed(42)
+indices = torch.randperm(len(val_test_dataset), generator=generator).tolist()
+
+total_len = len(val_test_dataset)
+train_size = int(0.8 * total_len)
+val_size = int(0.1 * total_len)
+
+# Lấy 10% dữ liệu cuối cùng làm Test Set (Hoàn toàn chưa từng thấy trong lúc Train/Val)
+test_indices = indices[train_size + val_size:]
+test_dataset = torch.utils.data.Subset(val_test_dataset, test_indices)
+test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+
+print(f"Số lượng ảnh trong tập Test: {len(test_dataset)} ảnh.")
+
+# HÀM ĐO LƯỜNG 3 CHỈ SỐ CỐT LÕI
+def evaluate_test_metrics(model, dataloader, is_quantized=False):
+    # Ép thiết bị về CPU để mô phỏng điện thoại và làm nổi bật sức mạnh Quantization
+    device_eval = torch.device('cpu') 
+    model = model.to(device_eval)
+    model.eval()
+    
+    all_preds, all_labels = [], []
+    inference_times = []
+    
+    # Warm-up CPU Cache (Chạy không tải vài lần để ổn định đồng hồ đo)
+    dummy = torch.randn(1, 3, 224, 224).to(device_eval)
+    with torch.no_grad():
+        for _ in range(5): _ = model(dummy)
+
+    with torch.no_grad():
+        for images, labels in tqdm(dataloader, desc="Đang quét Test Set", leave=False):
+            images = images.to(device_eval)
+            
+            # Bắt đầu bấm giờ Suy diễn
+            start_time = time.perf_counter()
+            outputs = model(images)
+            end_time = time.perf_counter()
+            
+            # Tính thời gian trung bình cho MỖI BỨC ẢNH trong batch
+            batch_time_ms = (end_time - start_time) * 1000
+            time_per_image = batch_time_ms / images.size(0)
+            inference_times.append(time_per_image)
+            
+            # Thu thập dự đoán
+            preds = torch.argmax(outputs, dim=1)
+            all_preds.extend(preds.cpu().numpy())
+            all_labels.extend(labels.numpy())
+            
+    # Tính toán Metrics
+    acc = accuracy_score(all_labels, all_preds)
+    macro_f1 = f1_score(all_labels, all_preds, average='macro')
+    avg_inference_time = np.mean(inference_times)
+    
+    return acc, macro_f1, avg_inference_time
+
+# CHẠY KIỂM ĐỊNH CHO CẢ 2 MÔ HÌNH
+# Tải mô hình FP32 Nguyên bản
+best_model_fp32 = MobileNetV3Small(num_classes=config['model']['num_classes'])
+best_model_fp32.load_state_dict(torch.load('checkpoints/mobilenetv3/best_model.pth', map_location='cpu'))
+acc_fp32, f1_fp32, time_fp32 = evaluate_test_metrics(best_model_fp32, test_loader, is_quantized=False)
+
+# Tải mô hình INT8 Lượng tử hóa
+quantized_model = torch.jit.load('checkpoints/mobilenetv3/best_model_quantized.pt', map_location='cpu')
+acc_int8, f1_int8, time_int8 = evaluate_test_metrics(quantized_model, test_loader, is_quantized=True)
+
+# IN BẢNG BÁO CÁO TỔNG KẾT (BẢNG NÀY ĐỂ ĐƯA VÀO SLIDE)
+print(f"{'Tiêu chí (Metrics)':<25} | {'Original (Float32)':<20} | {'Quantized (INT8)':<20}")
+print("-" * 70)
+print(f"{'1. Độ chính xác (Accuracy)':<25} | {acc_fp32:.4f}               | {acc_int8:.4f}")
+print(f"{'2. Macro F1-Score':<25} | {f1_fp32:.4f}               | {f1_int8:.4f}")
+print(f"{'3. Thời gian suy diễn':<25} | {time_fp32:.2f} ms/ảnh          | {time_int8:.2f} ms/ảnh")
+
+# Nhận xét tự động
+speedup = time_fp32 / time_int8
+f1_drop = f1_fp32 - f1_int8
+print(f"- Lượng tử hóa giúp tăng tốc độ xử lý lên {speedup:.2f} lần.")
+print(f"- Đánh đổi: Macro F1-Score {'giảm đi' if f1_drop > 0 else 'tăng lên'} một lượng không đáng kể ({abs(f1_drop):.4f}).")
+import time
+import torch
+import numpy as np
+from sklearn.metrics import accuracy_score, f1_score
+from sklearn.utils import resample
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+
+# 1. TRÍCH XUẤT TẬP TEST
+val_test_dataset = PlantVillageDataset(dataset_dir, transform=get_baseline_transforms(224))
+generator = torch.Generator().manual_seed(42)
+indices = torch.randperm(len(val_test_dataset), generator=generator).tolist()
+train_size = int(0.8 * len(val_test_dataset))
+val_size = int(0.1 * len(val_test_dataset))
+test_dataset = torch.utils.data.Subset(val_test_dataset, indices[train_size + val_size:])
+test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+
+# 2. HÀM TÍNH KHOẢNG TIN CẬY 95% BẰNG BOOTSTRAPPING
+def compute_f1_ci(y_true, y_pred, n_bootstraps=1000, ci=95):
+    bootstrapped_scores = []
+    for _ in range(n_bootstraps):
+        # Lấy mẫu có hoàn lại
+        indices = resample(range(len(y_pred)))
+        score = f1_score(np.array(y_true)[indices], np.array(y_pred)[indices], average='macro')
+        bootstrapped_scores.append(score)
+    
+    alpha = (100 - ci) / 2.0
+    lower_bound = np.percentile(bootstrapped_scores, alpha)
+    upper_bound = np.percentile(bootstrapped_scores, 100 - alpha)
+    return lower_bound, upper_bound
+
+# 3. HÀM ĐO LƯỜNG TỔNG HỢP
+def evaluate_test_metrics_with_ci(model, dataloader, is_quantized=False):
+    device_eval = torch.device('cpu') 
+    model = model.to(device_eval)
+    model.eval()
+    all_preds, all_labels, inference_times = [], [], []
+    
+    with torch.no_grad():
+        for images, labels in tqdm(dataloader, desc="Đang quét Test Set", leave=False):
+            images = images.to(device_eval)
+            start_time = time.perf_counter()
+            outputs = model(images)
+            inference_times.append(((time.perf_counter() - start_time) * 1000) / images.size(0))
+            all_preds.extend(torch.argmax(outputs, dim=1).cpu().numpy())
+            all_labels.extend(labels.numpy())
+            
+    macro_f1 = f1_score(all_labels, all_preds, average='macro')
+    # Tính 95% CI
+    ci_lower, ci_upper = compute_f1_ci(all_labels, all_preds)
+    avg_time = np.mean(inference_times)
+    
+    return macro_f1, ci_lower, ci_upper, avg_time
+
+# 4. CHẠY VÀ IN BÁO CÁO
+quantized_model = torch.jit.load('checkpoints/mobilenetv3/best_model_quantized.pt', map_location='cpu')
+f1_int8, ci_l_int8, ci_u_int8, time_int8 = evaluate_test_metrics_with_ci(quantized_model, test_loader, is_quantized=True)
+
+
+print(f"{'Tiêu chí (Metrics)':<25} | {'Quantized (INT8)':<25}")
+print("-" * 80)
+print(f"{'Macro F1-Score':<25} |  {f1_int8:.4f}")
+print(f"{'95% Confidence Interval':<25} | [{ci_l_int8:.4f}, {ci_u_int8:.4f}]")
+print(f"{'Thời gian suy diễn':<25} | {time_int8:.2f} ms/ảnh")
+!pip install grad-cam -q
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+from pytorch_grad_cam import GradCAM
+from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
+from pytorch_grad_cam.utils.image import show_cam_on_image
+
+
+def visualize_gradcam(model, dataset, image_idx=None):
+    model.eval()
+    # Chọn ảnh ngẫu nhiên từ tập Test nếu không truyền ID
+    if image_idx is None:
+        image_idx = np.random.randint(0, len(test_dataset))
+        
+    tensor_img, label_idx = test_dataset[image_idx]
+    input_tensor = tensor_img.unsqueeze(0).to(device)
+    true_class_name = dataset.classes[label_idx]
+    
+    # 1. Xác định Layer cuối cùng trích xuất đặc trưng (Target Layer)
+    # Trong MobileNetV3 tự code, conv2 là lớp tích chập 1x1 cuối cùng trước khi vào Average Pooling
+    target_layers = [model.conv2]
+
+    # 2. Khởi tạo Grad-CAM
+    cam = GradCAM(model=model, target_layers=target_layers)
+    
+    # Target là lớp nhãn thực tế để xem AI tìm kiếm đặc trưng lớp này thế nào
+    targets = [ClassifierOutputTarget(label_idx)]
+
+    # 3. Tính toán Heatmap
+    grayscale_cam = cam(input_tensor=input_tensor, targets=targets)
+    grayscale_cam = grayscale_cam[0, :]
+
+    # 4. Đảo ngược quá trình Normalize để vẽ lên ảnh gốc
+    img_unnorm = tensor_img.numpy().transpose((1, 2, 0))
+    mean = np.array([0.485, 0.456, 0.406])
+    std = np.array([0.229, 0.224, 0.225])
+    img_unnorm = std * img_unnorm + mean
+    img_unnorm = np.clip(img_unnorm, 0, 1)
+
+    # 5. Phủ Heatmap lên ảnh gốc (Overlay)
+    visualization = show_cam_on_image(img_unnorm, grayscale_cam, use_rgb=True)
+
+    # 6. Lấy dự đoán của mô hình
+    with torch.no_grad():
+        out = model(input_tensor)
+        pred_idx = torch.argmax(out, dim=1).item()
+        pred_class_name = dataset.classes[pred_idx]
+
+    # 7. Hiển thị
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+    axes[0].imshow(img_unnorm)
+    axes[0].set_title(f"Ảnh gốc\\nThực tế: {true_class_name}", fontsize=12)
+    axes[0].axis('off')
+
+    axes[1].imshow(grayscale_cam, cmap='jet')
+    axes[1].set_title("Grad-CAM Heatmap\\n(Vùng AI tập trung)", fontsize=12)
+    axes[1].axis('off')
+
+    axes[2].imshow(visualization)
+    axes[2].set_title(f"Overlay Result\\nDự đoán AI: {pred_class_name}", fontsize=12)
+    axes[2].axis('off')
+
+    plt.tight_layout()
+    plt.show()
+
+# Chạy trực quan hóa cho 3 mẫu bệnh ngẫu nhiên
+# quantized_model = torch.jit.load('checkpoints/best_model_quantized.pt', map_location='cpu')
+best_model_fp32 = MobileNetV3Small(num_classes=config['model']['num_classes'])
+best_model_fp32.load_state_dict(torch.load('checkpoints/mobilenetv3/best_model.pth', map_location='cpu'))
+best_model_fp32 = best_model_fp32.to(device)
+for i in range(3):
+    visualize_gradcam(best_model_fp32, val_test_dataset)
+import torch
+import torch.nn.functional as F
+from PIL import Image
+from torchvision import transforms
+
+
+
+def predict_with_tta(model, image_path, class_names, device):
+    model.eval()
+    image = Image.open(image_path).convert('RGB')
+
+    # Định nghĩa 4 luồng nhìn (Views) khác nhau cho cùng 1 bức ảnh
+    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    
+    tta_transforms = [
+        # View 1: Chuẩn hóa cơ bản (Resize thẳng)
+        transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor(), normalize]),
+        
+        # View 2: Center Crop (Cắt bỏ rìa nhiễu, tập trung vào giữa lá)
+        transforms.Compose([transforms.Resize(256), transforms.CenterCrop(224), transforms.ToTensor(), normalize]),
+        
+        # View 3: Lật ngang (Horizontal Flip)
+        transforms.Compose([transforms.Resize((224, 224)), transforms.RandomHorizontalFlip(p=1.0), transforms.ToTensor(), normalize]),
+        
+        # View 4: Phóng to nhẹ (Zoom in để xem kỹ đốm bệnh)
+        transforms.Compose([transforms.Resize(256), transforms.RandomCrop(224), transforms.ToTensor(), normalize])
+    ]
+
+    # Thu thập xác suất (Softmax) từ tất cả các view
+    all_probs = []
+    with torch.no_grad():
+        for t in tta_transforms:
+            tensor_img = t(image).unsqueeze(0).to(device) # Thêm batch size = 1
+            logits = model(tensor_img)
+            probs = F.softmax(logits, dim=1)
+            all_probs.append(probs)
+
+    # Lấy trung bình cộng xác suất của 4 luồng nhìn (Ensemble Averaging)
+    avg_probs = torch.mean(torch.stack(all_probs), dim=0).squeeze()
+    
+    # Tìm class có xác suất cao nhất
+    top_prob, top_class_idx = torch.max(avg_probs, dim=0)
+    
+    predicted_class = class_names[top_class_idx.item()]
+    confidence = top_prob.item() * 100
+
+    return predicted_class, confidence, avg_probs
+
+import matplotlib.pyplot as plt
+from PIL import Image
+import os
+from src.models.factory import MobileNetV3Small
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+best_model_fp32 = MobileNetV3Small(num_classes=config['model']['num_classes'])
+best_model_fp32.load_state_dict(torch.load('checkpoints/mobilenetv3/best_model.pth', map_location='cpu'))
+best_model_fp32 = best_model_fp32.to(device)
+test_image_path = project_dir + "/test_image.jpg" 
+
+if os.path.exists(test_image_path):
+    img = Image.open(test_image_path)
+    plt.figure(figsize=(5, 5))
+    plt.imshow(img)
+    plt.title("Ảnh kiểm thử (Thực tế)", fontsize=14)
+    plt.axis('off')
+    plt.show()
+    
+    
+    # 3. Khởi chạy dự đoán đa góc độ
+    class_names = dataset.classes
+    pred_class, conf, _ = predict_with_tta(best_model_fp32, test_image_path, class_names, device)
+    
+    print(f"Bệnh lý phát hiện: {pred_class}")
+    print(f"Độ tự tin: {conf:.2f}%")
+
+else:
+    print(f"Vui lòng upload một tấm ảnh lên và đổi tên thành: {test_image_path}")
