@@ -21,6 +21,7 @@ export default function RootLayout({
             <nav className="space-y-2">
               <a href="/" className="block p-2 rounded hover:bg-slate-800">Dashboard</a>
               <a href="/diagnose" className="block p-2 rounded hover:bg-slate-800 text-green-400">Diagnosis Center</a>
+              <a href="/batch-scan" className="block p-2 rounded hover:bg-slate-800 text-indigo-400">Batch Scanner</a>
             </nav>
           </aside>
           <main className="flex-1 overflow-y-auto bg-slate-50">

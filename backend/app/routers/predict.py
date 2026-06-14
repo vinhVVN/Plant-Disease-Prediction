@@ -28,7 +28,7 @@ async def predict_endpoint(
     
     try:
         with torch.no_grad():
-            top5_results, input_tensor, original_image = predict_image(image_bytes, model_name=model_name)
+            top5_results, tta_b64_list, input_tensor = predict_image(image_bytes, model_name=model_name)
             
         target_class_idx = top5_results[0]['class_idx']
         predicted_class_name = top5_results[0]['class']
@@ -44,6 +44,7 @@ async def predict_endpoint(
         with torch.set_grad_enabled(True):
             input_tensor.requires_grad_()
             advanced_xai = generate_advanced_xai(input_tensor, target_class_idx, model_name=model_name)
+            advanced_xai['tta_b64_list'] = tta_b64_list
             
         inference_time_ms = int((time.time() - start_time) * 1000)
         

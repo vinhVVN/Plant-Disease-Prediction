@@ -251,41 +251,53 @@ export default function DiagnosticReportPage() {
                     </h3>
 
                     <div className="space-y-10 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-slate-200">
-                      {/* Step 1 */}
+                      {/* Step 1: TTA Batching */}
                       <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group">
                         <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-slate-100 text-slate-500 shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 shadow-sm">
                           <ImageIcon className="w-4 h-4" />
                         </div>
                         <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl border border-slate-200 bg-white shadow-sm">
-                          <p className="text-sm font-bold text-slate-600">1. Original Image</p>
-                          <img src={preview!} alt="Original" className="w-full mt-3 rounded-xl object-cover h-28 border border-slate-100" />
+                          <p className="text-sm font-bold text-slate-600">1. Multi-View TTA</p>
+                          <p className="text-xs text-slate-500 mb-3">(Ensemble Input 4 Góc độ)</p>
+                          <div className="flex flex-col gap-3">
+                            {cloudResult.xai.tta_b64_list.map((b64, idx) => (
+                              <div key={idx} className="relative">
+                                <span className="absolute top-1 left-1 bg-slate-900/60 text-white text-[10px] px-1.5 py-0.5 rounded backdrop-blur-sm">View {idx + 1}</span>
+                                <img src={`data:image/jpeg;base64,${b64}`} alt={`TTA View ${idx + 1}`} className="w-full rounded-lg object-cover border border-slate-200 shadow-sm" />
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
-                      {/* Step 2 */}
+
+                      {/* Step 2: Conv1 Feature Map */}
                       <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group">
                         <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-teal-50 text-teal-600 shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 shadow-sm">
                           <Cloud className="w-4 h-4" />
                         </div>
                         <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl border border-slate-200 bg-white shadow-sm">
-                          <p className="text-sm font-bold text-teal-600">2. Input Tensor</p>
-                          <img src={`data:image/jpeg;base64,${cloudResult.xai.pipeline_trace_b64}`} className="w-full mt-3 rounded-xl h-28 object-cover border border-slate-100" />
+                          <p className="text-sm font-bold text-teal-600">2. Low-level Feature (Conv1)</p>
+                          <p className="text-xs text-slate-500 mb-3">(Phát hiện viền/mảng màu - Channel 0)</p>
+                          <img src={`data:image/jpeg;base64,${cloudResult.xai.feature_map_b64}`} className="w-full rounded-xl h-28 object-cover border border-slate-100" />
                         </div>
                       </div>
-                      {/* Step 3 */}
+
+                      {/* Step 3: Leaf Mask */}
                       <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group">
                         <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-indigo-50 text-indigo-600 shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 shadow-sm">
                           <Beaker className="w-4 h-4" />
                         </div>
                         <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl border border-slate-200 bg-white shadow-sm">
-                          <p className="text-sm font-bold text-indigo-600">3. Leaf Seg Mask</p>
-                          <img src={`data:image/jpeg;base64,${cloudResult.xai.leaf_mask_b64}`} className="w-full mt-3 rounded-xl h-28 object-cover filter contrast-125 border border-slate-100 bg-slate-900" />
+                          <p className="text-sm font-bold text-indigo-600">3. Background Suppression</p>
+                          <p className="text-xs text-slate-500 mb-3">(Phân tách nền bằng Mask Trắng Đen)</p>
+                          <img src={`data:image/jpeg;base64,${cloudResult.xai.leaf_mask_b64}`} className="w-full rounded-xl h-28 object-cover border border-slate-100 bg-slate-900" />
                         </div>
                       </div>
                     </div>
-
                   </div>
                 </div>
               )}
+
 
               {/* CỘT PHẢI: LÂM SÀNG VÀ ĐIỀU TRỊ (Mở rộng toàn màn hình nếu Standard Mode) */}
               <div className={`${viewMode === 'expert' ? 'lg:col-span-8' : 'lg:col-span-12'} transition-all duration-500`}>

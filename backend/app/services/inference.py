@@ -74,33 +74,43 @@ models_dict = {
     }
 }
 
-# 3. Preprocessing
-# SỬA LẠI: Dùng Resize((224, 224)) (Squash) thay vì CenterCrop để khớp 100% 
-# với quá trình resize trên Canvas (JS) và trong Notebook của bạn.
-preprocess = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-])
+tta_transforms = [
+    transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor(), transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]),
+    transforms.Compose([transforms.Resize(256), transforms.CenterCrop(224), transforms.ToTensor(), transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]),
+    transforms.Compose([transforms.Resize((224, 224)), transforms.functional.hflip, transforms.ToTensor(), transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]),
+    transforms.Compose([transforms.Resize(256), transforms.RandomCrop(224), transforms.ToTensor(), transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
+]
+
+def _tensor_to_b64(tensor):
+    mean = np.array([0.485, 0.456, 0.406])
+    std = np.array([0.229, 0.224, 0.225])
+    img_unnorm = tensor.cpu().numpy().transpose((1, 2, 0))
+    img_unnorm = std * img_unnorm + mean
+    img_unnorm = np.clip(img_unnorm, 0, 1)
+    img_unnorm_uint8 = np.uint8(img_unnorm * 255)
+    _, buffer = cv2.imencode('.jpg', cv2.cvtColor(img_unnorm_uint8, cv2.COLOR_RGB2BGR))
+    return base64.b64encode(buffer).decode('utf-8')
 
 def predict_image(image_bytes: bytes, model_name: str = 'efficientnetb0'):
     """
-    Hàm này sẽ nhận bytes ảnh, tiền xử lý, chạy inference và trả về kết quả Top-5.
-    (Sẽ implement chi tiết cùng với Endpoint /api/predict)
+    Hàm sử dụng TTA (Test-Time Augmentation): tạo batch 4 ảnh, dự đoán, và trả về mean probabilities.
     """
     if model_name not in models_dict:
         raise ValueError(f"Model {model_name} not supported")
         
     model = models_dict[model_name]['model']
-    
     image = Image.open(BytesIO(image_bytes)).convert("RGB")
-    input_tensor = preprocess(image).unsqueeze(0).to(device)
+    
+    # Tạo 4 tensors từ 4 transform
+    tensors = [t(image) for t in tta_transforms]
+    batch_tensor = torch.stack(tensors).to(device) # Shape: (4, 3, 224, 224)
     
     with torch.no_grad():
-        output = model(input_tensor)
-        probabilities = torch.nn.functional.softmax(output[0], dim=0)
+        output = model(batch_tensor) # Forward pass 1 lần duy nhất cho cả batch 4
+        probabilities = torch.nn.functional.softmax(output, dim=1)
+        mean_probabilities = probabilities.mean(dim=0) # Trung bình cộng của 4 luồng nhìn
         
-    top5_prob, top5_catid = torch.topk(probabilities, 5)
+    top5_prob, top5_catid = torch.topk(mean_probabilities, 5)
     
     results = []
     for i in range(5):
@@ -110,7 +120,10 @@ def predict_image(image_bytes: bytes, model_name: str = 'efficientnetb0'):
             "class_idx": top5_catid[i].item()
         })
         
-    return results, input_tensor, image
+    tta_b64_list = [_tensor_to_b64(t) for t in tensors]
+    main_tensor = tensors[1].unsqueeze(0).to(device) # Lấy CenterCrop làm đại diện
+        
+    return results, tta_b64_list, main_tensor
 
 from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
@@ -136,6 +149,30 @@ def generate_advanced_xai(image_tensor: torch.Tensor, target_class: int, model_n
         grayscale_cam = cam(input_tensor=image_tensor, targets=targets)
         grayscale_cam = grayscale_cam[0, :] # Shape: [224, 224]
         
+        # Trích xuất Feature Map (Layer 1 - Conv1)
+        try:
+            if model_name == 'mobilenetv3':
+                first_layer_out = model.features[0][0](image_tensor)
+            else:
+                first_layer_out = model.features[0][0](image_tensor)
+                
+            # Lấy Kênh 0 (Filter 0), áp dụng ReLU
+            fmap = F.relu(first_layer_out[0, 0]).cpu().detach().numpy()
+            
+            # Chuẩn hóa Min-Max thủ công [0, 255]
+            fmap_min, fmap_max = fmap.min(), fmap.max()
+            if fmap_max > fmap_min:
+                fmap_norm = (fmap - fmap_min) / (fmap_max - fmap_min) * 255.0
+            else:
+                fmap_norm = np.zeros_like(fmap)
+                
+            fmap_norm = np.uint8(fmap_norm)
+            fmap_color = cv2.applyColorMap(fmap_norm, cv2.COLORMAP_VIRIDIS)
+            fmap_color = cv2.cvtColor(fmap_color, cv2.COLOR_BGR2RGB)
+        except Exception as e:
+            print("Feature Map Extraction Error:", e)
+            fmap_color = np.zeros((224, 224, 3), dtype=np.uint8)
+            
     # 2. Đảo ngược chuẩn hóa (Pipeline Trace)
     img_unnorm = image_tensor.squeeze().cpu().detach().numpy().transpose((1, 2, 0))
     mean = np.array([0.485, 0.456, 0.406])
@@ -186,6 +223,7 @@ def generate_advanced_xai(image_tensor: torch.Tensor, target_class: int, model_n
         
     return {
         "pipeline_trace_b64": _encode_b64(img_unnorm_uint8),
+        "feature_map_b64": _encode_b64(fmap_color),
         "leaf_mask_b64": _encode_b64(leaf_mask_visual),
         "heatmap_b64": _encode_b64(heatmap_color),
         "overlay_b64": _encode_b64(visualization),

@@ -11,7 +11,9 @@ export interface CloudPredictionResult {
     description: string;
   };
   xai: {
+    tta_b64_list: string[];
     pipeline_trace_b64: string;
+    feature_map_b64: string;
     leaf_mask_b64: string;
     heatmap_b64: string;
     overlay_b64: string;

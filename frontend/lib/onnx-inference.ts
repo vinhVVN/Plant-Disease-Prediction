@@ -78,6 +78,17 @@ function softmax(arr: number[]): number[] {
   return exps.map((x) => x / sumExps);
 }
 
+let cachedSession: ort.InferenceSession | null = null;
+
+export async function getInferenceSession(): Promise<ort.InferenceSession> {
+  if (!cachedSession) {
+    cachedSession = await ort.InferenceSession.create('/models/best_model.onnx', {
+      executionProviders: ['wasm']
+    });
+  }
+  return cachedSession;
+}
+
 /**
  * Chạy suy luận (Inference) bằng ONNX Runtime Web
  */
@@ -89,10 +100,8 @@ export async function runEdgeInference(imageBlob: Blob): Promise<InferenceResult
     // 2. Tạo Tensor ONNX
     const tensor = new ort.Tensor('float32', inputData, [1, 3, IMAGE_SIZE, IMAGE_SIZE]);
 
-    // 3. Khởi tạo session (chỉ dùng wasm backend để đảm bảo chạy trên mọi thiết bị)
-    const session = await ort.InferenceSession.create('/models/best_model.onnx', {
-      executionProviders: ['wasm']
-    });
+    // 3. Lấy session từ cache
+    const session = await getInferenceSession();
 
     // 4. Chạy model
     const feeds: Record<string, ort.Tensor> = {};
