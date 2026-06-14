@@ -1,14 +1,24 @@
 export interface CloudPredictionResult {
   predicted_class: string;
   confidence: number;
+  uncertainty_warning: boolean;
   top5: { class: string; prob: number }[];
-  gradcam_heatmap: string;
-  gradcam_overlay: string;
   inference_time_ms: number;
   recommendation: {
+    disease_vi?: string;
     action: string;
     priority: string;
     description: string;
+  };
+  xai: {
+    pipeline_trace_b64: string;
+    leaf_mask_b64: string;
+    heatmap_b64: string;
+    overlay_b64: string;
+    severity: {
+      percentage: number;
+      level: string;
+    }
   };
 }
 

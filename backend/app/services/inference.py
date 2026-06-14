@@ -116,42 +116,66 @@ from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 from pytorch_grad_cam.utils.image import show_cam_on_image
 
-def generate_gradcam(image_tensor: torch.Tensor, target_class: int, model_name: str = 'efficientnetb0'):
+def generate_advanced_xai(image_tensor: torch.Tensor, target_class: int, model_name: str = 'efficientnetb0'):
     """
-    Sinh Grad-CAM heatmap an toàn, đồng bộ không gian tuyệt đối bằng kỹ thuật Un-normalize Tensor.
+    Sinh Grad-CAM heatmap, trích xuất Leaf Mask, và tính toán Mức độ nghiêm trọng (Severity Estimation).
     """
     if model_name not in models_dict:
         raise ValueError(f"Model {model_name} not supported")
         
     model = models_dict[model_name]['model']
-    
-    # TRẢ VỀ ĐÚNG LAYER BẠN ĐÃ ĐỊNH NGHĨA
     target_layer = models_dict[model_name]['target_layer'] 
     
-    # 1. Tính toán Heatmap
+    # 1. Tính toán Heatmap bằng Grad-CAM
     cam = GradCAM(model=model, target_layers=[target_layer])
     targets = [ClassifierOutputTarget(target_class)]
     
-    # Bật gradient tạm thời cho Captum (rất quan trọng trong API)
     with torch.set_grad_enabled(True):
         image_tensor = image_tensor.to(device)
         image_tensor.requires_grad_()
         grayscale_cam = cam(input_tensor=image_tensor, targets=targets)
         grayscale_cam = grayscale_cam[0, :] # Shape: [224, 224]
-    
-    # 2. Đảo ngược chuẩn hóa (Un-normalize) chính xác như Notebook của bạn
-    # Squeeze() để loại bỏ batch_size, chuyển từ [1, 3, 224, 224] thành [3, 224, 224]
+        
+    # 2. Đảo ngược chuẩn hóa (Pipeline Trace)
     img_unnorm = image_tensor.squeeze().cpu().detach().numpy().transpose((1, 2, 0))
     mean = np.array([0.485, 0.456, 0.406])
     std = np.array([0.229, 0.224, 0.225])
     
     img_unnorm = std * img_unnorm + mean
-    img_unnorm = np.clip(img_unnorm, 0, 1) # Ảnh nền bây giờ đã khớp hoàn hảo 100%
+    img_unnorm = np.clip(img_unnorm, 0, 1) 
+    img_unnorm_uint8 = np.uint8(img_unnorm * 255)
     
-    # 3. Phủ Heatmap lên ảnh nền (Overlay)
+    # 3. Tính toán Severity (Leaf Mask & Thresholding)
+    hsv = cv2.cvtColor(img_unnorm_uint8, cv2.COLOR_RGB2HSV)
+    s_channel = hsv[:, :, 1]
+    _, leaf_mask = cv2.threshold(s_channel, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    
+    # Tạo ảnh Leaf Mask (Trắng đen) để hiển thị lên Pipeline Trace
+    leaf_mask_visual = cv2.cvtColor(leaf_mask, cv2.COLOR_GRAY2RGB)
+    
+    leaf_area = np.sum(leaf_mask > 0)
+    # Lấy vùng heatmap mạnh (>0.6) giao với lá
+    disease_mask = grayscale_cam > 0.6
+    disease_area = np.sum((disease_mask) & (leaf_mask > 0))
+    
+    severity_percentage = 0.0
+    severity_level = "Healthy"
+    if leaf_area > 0:
+        severity_percentage = (disease_area / leaf_area) * 100
+        if severity_percentage < 5:
+            severity_level = "Mild"
+        elif severity_percentage < 20:
+            severity_level = "Moderate"
+        else:
+            severity_level = "Severe"
+            
+    # Nếu là lá khỏe mạnh thì severity = 0
+    if "healthy" in CLASS_NAMES[target_class].lower():
+        severity_percentage = 0.0
+        severity_level = "None"
+    
+    # 4. Phủ Heatmap lên ảnh nền (Overlay)
     visualization = show_cam_on_image(img_unnorm, grayscale_cam, use_rgb=True)
-    
-    # 4. Tạo ảnh Heatmap màu độc lập
     heatmap_color = cv2.applyColorMap(np.uint8(255 * grayscale_cam), cv2.COLORMAP_JET)
     heatmap_color = cv2.cvtColor(heatmap_color, cv2.COLOR_BGR2RGB)
     
@@ -160,7 +184,13 @@ def generate_gradcam(image_tensor: torch.Tensor, target_class: int, model_name: 
         _, buffer = cv2.imencode('.jpg', cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR))
         return base64.b64encode(buffer).decode('utf-8')
         
-    heatmap_b64 = _encode_b64(heatmap_color)
-    overlay_b64 = _encode_b64(visualization)
-    
-    return heatmap_b64, overlay_b64
+    return {
+        "pipeline_trace_b64": _encode_b64(img_unnorm_uint8),
+        "leaf_mask_b64": _encode_b64(leaf_mask_visual),
+        "heatmap_b64": _encode_b64(heatmap_color),
+        "overlay_b64": _encode_b64(visualization),
+        "severity": {
+            "percentage": round(severity_percentage, 2),
+            "level": severity_level
+        }
+    }

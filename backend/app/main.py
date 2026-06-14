@@ -5,7 +5,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from backend.app.services.inference import predict_image, generate_gradcam
+from backend.app.services.inference import predict_image
 
 from backend.app.routers.predict import router as predict_router
 
