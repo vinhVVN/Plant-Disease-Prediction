@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { runCloudInference, CloudPredictionResult } from "@/lib/api";
+import { compressImage, savePrediction } from "@/lib/db";
 import dynamic from "next/dynamic";
 
 // Dynamic Imports to prevent Hydration Mismatch
@@ -51,6 +52,20 @@ export default function DiagnosticReportPage() {
       const end = performance.now();
       setInferenceTime(end - start);
       setCloudResult(res);
+      
+      // Save to IndexedDB for Longitudinal Tracking
+      try {
+        const thumbnail = await compressImage(image, 200, 0.6);
+        await savePrediction({
+          imageThumbnail: thumbnail,
+          predictedClass: res.predicted_class,
+          severityPercentage: res.xai.severity.percentage,
+          intervention: null
+        });
+      } catch (dbErr) {
+        console.error("Failed to save to history DB:", dbErr);
+      }
+      
     } catch (e) {
       alert("Lỗi khi gọi API Cloud!");
     } finally {

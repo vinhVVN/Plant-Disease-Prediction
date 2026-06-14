@@ -6,13 +6,11 @@ const JPEG_QUALITY = 0.8;
 
 export interface PredictionRecord {
   id?: number;
-  imageBlob: Blob;          // Ảnh đã nén
-  imageThumbnail: Blob;     // Ảnh thumbnail (rất nhỏ)
-  modelUsed: 'mobilenet_edge' | 'efficientnet_cloud';
+  imageThumbnail: Blob;     // Ảnh thumbnail nén
   predictedClass: string;
-  confidence: number;
-  inferenceTimeMs: number;
+  severityPercentage: number;
   createdAt: number;
+  intervention: string | null;
 }
 
 interface AgroVisionDB extends DBSchema {
@@ -26,8 +24,8 @@ interface AgroVisionDB extends DBSchema {
 let dbPromise: Promise<IDBPDatabase<AgroVisionDB>> | null = null;
 
 if (typeof window !== 'undefined') {
-  dbPromise = openDB<AgroVisionDB>('agrovision_db', 1, {
-    upgrade(db) {
+  dbPromise = openDB<AgroVisionDB>('agrovision_db', 2, {
+    upgrade(db, oldVersion, newVersion, transaction) {
       if (!db.objectStoreNames.contains('predictions')) {
         const store = db.createObjectStore('predictions', {
           keyPath: 'id',
@@ -100,7 +98,7 @@ export async function savePrediction(record: Omit<PredictionRecord, 'id' | 'crea
 /**
  * Lấy lịch sử chẩn đoán
  */
-export async function getPredictions(limit: number = 50): Promise<PredictionRecord[]> {
+export async function getAllPredictions(limit: number = 50): Promise<PredictionRecord[]> {
   if (!dbPromise) return [];
   const db = await dbPromise;
   
@@ -118,5 +116,24 @@ export async function getPredictions(limit: number = 50): Promise<PredictionReco
     current = await current.continue();
   }
   
-  return results;
+  // Đảo ngược mảng để trả về theo thứ tự thời gian tăng dần cho biểu đồ (Cũ -> Mới)
+  return results.reverse();
+}
+
+/**
+ * Thêm ghi chú can thiệp (Phun thuốc) vào một record đã có
+ */
+export async function addIntervention(id: number, interventionNote: string) {
+  if (!dbPromise) return;
+  const db = await dbPromise;
+  
+  const tx = db.transaction('predictions', 'readwrite');
+  const store = tx.objectStore('predictions');
+  
+  const record = await store.get(id);
+  if (!record) throw new Error("Record not found");
+  
+  record.intervention = interventionNote;
+  await store.put(record);
+  await tx.done;
 }
